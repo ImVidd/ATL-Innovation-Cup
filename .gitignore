@@ -1,0 +1,30 @@
+# Secrets - never commit
+.env
+.env.local
+.env.*.local
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+*.egg-info/
+
+# Uploads / user data
+uploads/
+*.pdf
+*.png
+*.jpg
+*.jpeg
+*.tiff
+
+# Streamlit / IDE
+.streamlit/secrets.toml
+.vscode/
+.idea/
+.DS_Store
+
+# Docker / local DB
+*.db
+*.sqlite3
