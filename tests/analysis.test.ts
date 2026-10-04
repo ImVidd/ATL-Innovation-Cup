@@ -96,6 +96,18 @@ describe("validateAnalysis", () => {
     expect(a.flagReason).toBeTruthy();
   });
 
+  it("always flags an answer that meets no criteria (e.g. S3, wrong concept)", () => {
+    const none = {
+      ...good,
+      results: good.results.map((r) => ({ ...r, status: "not_met", evidence: "" })),
+      flag: false,
+      flagReason: null,
+    };
+    const a = validateAnalysis(none, criteria, s3);
+    expect(a.flag).toBe(true);
+    expect(a.flagReason).toMatch(/No rubric criteria met/);
+  });
+
   it("drops criteria the rubric does not have", () => {
     const extra = { ...good, results: [...good.results, { criterionId: "C9", status: "met", evidence: "", note: "" }] };
     expect(validateAnalysis(extra, criteria, s1).results.map((r) => r.criterionId)).toEqual(["C1", "C2", "C3"]);

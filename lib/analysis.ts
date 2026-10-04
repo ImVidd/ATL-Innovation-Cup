@@ -59,11 +59,17 @@ export function validateAnalysis(raw: unknown, criteria: Criterion[], answerText
     return { criterionId: c.id, status: r.status, evidence, note };
   });
 
-  // Low confidence always means "look at this one", even if the model forgot to flag it.
-  const flag = parsed.flag || parsed.confidence === "low" || unverifiedQuote;
+  // Rules that always flag, even if the model forgot to:
+  // low confidence, a made-up quote, or an answer that meets nothing (often off-topic).
+  const nothingMet = results.every((r) => r.status === "not_met");
+  const flag = parsed.flag || parsed.confidence === "low" || unverifiedQuote || nothingMet;
   let flagReason = parsed.flagReason?.trim() || null;
   if (flag && !flagReason) {
-    flagReason = unverifiedQuote ? "AI quoted text that is not in the answer" : "AI is unsure about this answer";
+    flagReason = unverifiedQuote
+      ? "AI quoted text that is not in the answer"
+      : nothingMet
+        ? "No rubric criteria met: check whether the answer addresses a different question"
+        : "AI is unsure about this answer";
   }
   if (!flag) flagReason = null;
 
