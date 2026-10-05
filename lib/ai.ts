@@ -1,7 +1,8 @@
-import { ApiError, GoogleGenAI } from "@google/genai";
+import { ApiError, GoogleGenAI, type ContentListUnion } from "@google/genai";
+import { z } from "zod";
 import { ANALYSIS_JSON_SCHEMA, extractJson, validateAnalysis } from "./analysis";
 import { mockAnalysis } from "./mock";
-import { SYSTEM_PROMPT, buildUserMessage } from "./prompt";
+import { RUBRIC_EXTRACT_PROMPT, SYSTEM_PROMPT, buildUserMessage } from "./prompt";
 import type { Analysis, Criterion } from "./types";
 
 // All AI provider code lives here so the provider can be swapped in one place.
@@ -54,17 +55,19 @@ function providerReason(e: ApiError): string {
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
-async function callGemini(model: string, question: string, criteria: Criterion[], answerText: string): Promise<string> {
+type GeminiRequest = { contents: ContentListUnion; systemInstruction: string; schema: object };
+
+async function callGemini(model: string, req: GeminiRequest): Promise<string> {
   const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
   const response = await withTimeout(
     ai.models.generateContent({
       model,
-      contents: buildUserMessage(question, criteria, answerText),
+      contents: req.contents,
       config: {
-        systemInstruction: SYSTEM_PROMPT,
+        systemInstruction: req.systemInstruction,
         temperature: 0.2,
         responseMimeType: "application/json",
-        responseJsonSchema: ANALYSIS_JSON_SCHEMA,
+        responseJsonSchema: req.schema,
       },
     }),
     CALL_TIMEOUT_MS,
@@ -73,7 +76,7 @@ async function callGemini(model: string, question: string, criteria: Criterion[]
 }
 
 // Calls Gemini, retrying overloads and falling back to the next model when needed.
-async function callWithFallback(question: string, criteria: Criterion[], answerText: string): Promise<string> {
+async function callWithFallback(req: GeminiRequest): Promise<string> {
   const deadline = Date.now() + TOTAL_BUDGET_MS;
   let lastError: AiError = new AiError("provider", "The AI service is unavailable. Try again.");
 
@@ -81,7 +84,7 @@ async function callWithFallback(question: string, criteria: Criterion[], answerT
     for (let attempt = 1; attempt <= 2; attempt++) {
       if (Date.now() > deadline - 5_000) throw lastError;
       try {
-        return await callGemini(model, question, criteria, answerText);
+        return await callGemini(model, req);
       } catch (e) {
         if (e instanceof AiError) {
           lastError = e; // timeout: try the next model
@@ -125,13 +128,70 @@ export async function analyzeAnswer(
   }
 
   for (let attempt = 1; attempt <= 2; attempt++) {
-    const text = await callWithFallback(question, criteria, answerText);
+    const text = await callWithFallback({
+      contents: buildUserMessage(question, criteria, answerText),
+      systemInstruction: SYSTEM_PROMPT,
+      schema: ANALYSIS_JSON_SCHEMA,
+    });
     try {
       return { analysis: validateAnalysis(extractJson(text), criteria, answerText), mock: false };
     } catch {
       if (attempt === 2) {
         throw new AiError("invalid_output", "The AI returned a response we could not read.");
       }
+    }
+  }
+  throw new AiError("invalid_output", "Unreachable");
+}
+
+// ---- Rubric extraction from an uploaded file ----
+
+const extractedRubricSchema = z.object({
+  question: z.string(),
+  criteria: z.array(z.object({ points: z.number().positive(), description: z.string().min(1) })),
+  notes: z.string(),
+});
+export type ExtractedRubric = z.infer<typeof extractedRubricSchema>;
+
+const RUBRIC_JSON_SCHEMA = {
+  type: "object",
+  properties: {
+    question: { type: "string" },
+    criteria: {
+      type: "array",
+      items: {
+        type: "object",
+        properties: { points: { type: "number" }, description: { type: "string" } },
+        required: ["points", "description"],
+      },
+    },
+    notes: { type: "string" },
+  },
+  required: ["question", "criteria", "notes"],
+};
+
+export type RubricSource = { text: string } | { mimeType: string; dataBase64: string };
+
+// Reads a rubric from plain text or a file (PDF / image) and returns criteria for the TA to review.
+export async function extractRubric(source: RubricSource): Promise<ExtractedRubric> {
+  if (isMockMode()) {
+    throw new AiError("provider", "Reading rubric files needs the AI, which is off on this server. Paste the rubric as text.");
+  }
+  const filePart =
+    "text" in source
+      ? { text: `<rubric_document>\n${source.text}\n</rubric_document>` }
+      : { inlineData: { mimeType: source.mimeType, data: source.dataBase64 } };
+
+  for (let attempt = 1; attempt <= 2; attempt++) {
+    const text = await callWithFallback({
+      contents: [{ role: "user", parts: [filePart, { text: "Extract the rubric criteria from this document." }] }],
+      systemInstruction: RUBRIC_EXTRACT_PROMPT,
+      schema: RUBRIC_JSON_SCHEMA,
+    });
+    try {
+      return extractedRubricSchema.parse(extractJson(text));
+    } catch {
+      if (attempt === 2) throw new AiError("invalid_output", "The AI could not read a rubric from this file.");
     }
   }
   throw new AiError("invalid_output", "Unreachable");

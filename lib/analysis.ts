@@ -68,7 +68,7 @@ export function validateAnalysis(raw: unknown, criteria: Criterion[], answerText
     flagReason = unverifiedQuote
       ? "AI quoted text that is not in the answer"
       : nothingMet
-        ? "No rubric criteria met: check whether the answer addresses a different question"
+        ? "No rubric criteria met: may be off-topic or a misconception. Read it closely"
         : "AI is unsure about this answer";
   }
   if (!flag) flagReason = null;

@@ -17,3 +17,7 @@ export const answerInputSchema = z.object({
   label: z.string().max(10),
   text: z.string().min(1).max(MAX_ANSWER_CHARS),
 });
+
+// Rubric uploads sent to the AI. Vercel caps request bodies at ~4.5 MB, and base64 adds a third.
+export const MAX_RUBRIC_FILE_BYTES = 3_000_000;
+export const ALLOWED_RUBRIC_MIME = ["application/pdf", "image/png", "image/jpeg", "image/webp"] as const;

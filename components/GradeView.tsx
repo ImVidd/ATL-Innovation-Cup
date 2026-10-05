@@ -17,6 +17,10 @@ type Props = {
   onRetry: (answerId: string) => void;
 };
 
+// Show code answers in a monospace font so indentation is readable.
+const looksLikeCode = (text: string) =>
+  /^\s*(def |class |import |from \S+ import|#include|public |private |function |const |let |int |print\(|for .*:|while .*:|if .*:)/m.test(text);
+
 const isScored = (a: Answer) => a.finalScore !== null && a.finalScore !== undefined;
 
 export default function GradeView({ session, totalPoints, current, elapsedSeconds, onSelect, onSave, onRetry }: Props) {
@@ -83,7 +87,11 @@ export default function GradeView({ session, totalPoints, current, elapsedSecond
           </span>
         </div>
 
-        <div className="whitespace-pre-wrap rounded-md border border-slate-200 bg-white p-4 leading-relaxed">{answer.text}</div>
+        <div
+          className={`whitespace-pre-wrap rounded-md border border-slate-200 bg-white p-4 leading-relaxed ${looksLikeCode(answer.text) ? "font-mono text-sm" : ""}`}
+        >
+          {answer.text}
+        </div>
 
         <AnalysisPanel answer={answer} criteria={session.criteria} showBaseline={showBaseline} onRetry={() => onRetry(answer.id)} />
 

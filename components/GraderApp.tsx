@@ -18,6 +18,9 @@ export default function GraderApp() {
   const [current, setCurrent] = useState(0);
   const [saved, setSaved] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
+  // Short confirmation after each score ("S1 saved ✓"), so the grader knows it worked.
+  const [toast, setToast] = useState<string | null>(null);
+  const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   // Seconds the on-screen answer has been open in this visit (updated every second).
   const [live, setLive] = useState<{ answerId: string; secs: number } | null>(null);
 
@@ -136,10 +139,18 @@ export default function GraderApp() {
     analyzeMany(s, s.answers);
   }
 
+  function showToast(text: string) {
+    if (toastTimer.current) clearTimeout(toastTimer.current);
+    setToast(text);
+    toastTimer.current = setTimeout(() => setToast(null), 4000);
+  }
+
   function saveScore(answerId: string, score: number, note: string) {
     const s = sessionRef.current;
     if (!s) return;
     const answer = s.answers.find((a) => a.id === answerId)!;
+    const max = s.criteria.reduce((sum, c) => sum + c.points, 0);
+    const scoredText = `${answer.label} scored ${score} / ${max}`;
     const running = timerStartRef.current ? (Date.now() - timerStartRef.current) / 1000 : 0;
     updateAnswer(answerId, { finalScore: score, graderNote: note });
 
@@ -151,8 +162,11 @@ export default function GraderApp() {
       })
         .then((r) => {
           if (!r.ok) throw new Error();
+          showToast(`✓ ${scoredText} · saved`);
         })
         .catch(() => setNotice(`Could not save the score for ${answer.label} to the server. It is kept on this page.`));
+    } else {
+      showToast(`✓ ${scoredText} · kept on this page (not saved to a server)`);
     }
 
     // Move to the next unscored answer, or to results when everything is scored.
@@ -252,6 +266,16 @@ export default function GraderApp() {
             setView("grade");
           }}
         />
+      )}
+
+      {toast && (
+        <div
+          className="fixed bottom-4 left-1/2 z-50 -translate-x-1/2 rounded-md bg-emerald-700 px-4 py-2 text-sm font-medium text-white shadow-lg"
+          role="status"
+          aria-live="polite"
+        >
+          {toast}
+        </div>
       )}
 
       <footer className="mt-10 border-t border-slate-200 pt-4 text-xs text-slate-500">
