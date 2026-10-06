@@ -65,6 +65,7 @@ npm run build
 - `lib/prompt.ts`: the AI instructions
 - `app/api/sessions`, `app/api/answers`: optional Supabase saving (`lib/db.ts`)
 - `lib/baseline.ts`: non-AI keyword matcher; `lib/mock.ts`: mock mode
+- `DESIGN.md`: colours, fonts and shared classes (tokens in `app/globals.css`; brand book and logos in `design/`)
 
 ## Status: what is live, simulated, untested
 
