@@ -19,7 +19,7 @@ type FileStatus = { kind: "loading" | "ok" | "error"; message: string } | null;
 
 function StatusLine({ status }: { status: FileStatus }) {
   if (!status) return null;
-  const cls = status.kind === "error" ? "text-red-700" : status.kind === "ok" ? "text-emerald-700" : "text-slate-600";
+  const cls = status.kind === "error" ? "text-danger" : status.kind === "ok" ? "text-met" : "text-ink-muted";
   return (
     <span className={`mt-1 block text-sm ${cls}`} role={status.kind === "error" ? "alert" : "status"}>
       {status.kind === "loading" && "⏳ "}
@@ -117,8 +117,8 @@ export default function SetupPanel({ onStart }: { onStart: (input: SetupInput) =
     <form onSubmit={start} className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h2 className="text-xl font-semibold">Set up one question</h2>
-          <p className="text-sm text-slate-600">Paste or upload the question, rubric, and typed answers. Answers are labeled S1, S2, ... automatically.</p>
+          <h2 className="font-serif text-[34px] leading-10 font-semibold tracking-tight">Set up one question</h2>
+          <p className="text-sm text-ink-muted">Paste or upload the question, rubric, and typed answers. Answers are labeled S1, S2, ... automatically.</p>
         </div>
         <button type="button" onClick={insertSample} className="btn-secondary">
           Insert sample (fake data)
@@ -131,7 +131,7 @@ export default function SetupPanel({ onStart }: { onStart: (input: SetupInput) =
           value={question}
           onChange={(e) => setQuestion(e.target.value)}
           rows={2}
-          className="input"
+          className="input font-serif text-lg"
           placeholder="e.g. Explain operant conditioning and give one example."
         />
       </label>
@@ -152,17 +152,17 @@ export default function SetupPanel({ onStart }: { onStart: (input: SetupInput) =
           value={rubricText}
           onChange={(e) => setRubricText(e.target.value)}
           rows={5}
-          className="input font-mono text-sm"
+          className="input font-mono text-sm leading-[22px]"
           placeholder={"2 | Defines operant conditioning\n2 | Gives a correct example\n1 | Mentions reinforcement or punishment"}
         />
         <StatusLine status={rubricStatus} />
         {rubric.criteria.length > 0 && (
-          <span className="mt-1 block text-sm text-slate-600">
+          <span className="mt-1 block text-sm text-ink-muted">
             {rubric.criteria.length} criteria · {rubric.totalPoints} points total
           </span>
         )}
         {rubric.errors.map((err) => (
-          <span key={err.line} className="mt-1 block text-sm text-red-700" role="alert">
+          <span key={err.line} className="mt-1 block text-sm text-danger" role="alert">
             Line {err.line} (&quot;{err.text}&quot;): {err.message}
           </span>
         ))}
@@ -183,22 +183,22 @@ export default function SetupPanel({ onStart }: { onStart: (input: SetupInput) =
           value={answersText}
           onChange={(e) => setAnswersText(e.target.value)}
           rows={10}
-          className="input text-sm"
+          className="input font-serif text-[15px] leading-6"
           placeholder={"First answer...\n---\nSecond answer...\n---\nThird answer..."}
         />
         <StatusLine status={answersStatus} />
-        <span className="mt-1 block text-sm text-slate-600">{answers.length} answer{answers.length === 1 ? "" : "s"} detected</span>
+        <span className="mt-1 block text-sm text-ink-muted">{answers.length} answer{answers.length === 1 ? "" : "s"} detected</span>
       </div>
 
       {submitted && problems.length > 0 && (
-        <ul className="rounded-md border border-red-300 bg-red-50 p-3 text-sm text-red-800" role="alert">
+        <ul className="callout callout-danger flex-col gap-1" role="alert">
           {problems.map((p) => (
             <li key={p}>• {p}</li>
           ))}
         </ul>
       )}
 
-      <button type="submit" className="btn-primary w-full sm:w-auto">
+      <button type="submit" className="btn-primary min-h-12 w-full px-6 text-base sm:w-auto">
         Start grading{answers.length > 0 ? ` ${answers.length} answer${answers.length === 1 ? "" : "s"}` : ""}
       </button>
     </form>
