@@ -130,6 +130,25 @@ body {
   font-family: var(--font-sans);
 }
 
+/* Header logo: show the mark that matches the active theme (same selectors as the tokens above). */
+.logo-dark {
+  display: none;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .logo-light {
+    display: none;
+  }
+  :root:not([data-theme="light"]) .logo-dark {
+    display: block;
+  }
+}
+:root[data-theme="dark"] .logo-light {
+  display: none;
+}
+:root[data-theme="dark"] .logo-dark {
+  display: block;
+}
+
 /* One focus treatment everywhere: 2px ring, 2px offset. */
 :where(a, button, input, textarea, select, summary, [tabindex]):focus-visible {
   outline: 2px solid var(--focus);
