@@ -4,20 +4,20 @@ import { baselineAnalysis } from "@/lib/baseline";
 import type { Analysis, Answer, Criterion, CriterionStatus } from "@/lib/types";
 
 const STATUS_STYLE: Record<CriterionStatus, { label: string; cls: string }> = {
-  met: { label: "Met", cls: "bg-emerald-100 text-emerald-800 border-emerald-300" },
-  partial: { label: "Partly met", cls: "bg-amber-100 text-amber-900 border-amber-300" },
-  not_met: { label: "Missed", cls: "bg-slate-100 text-slate-700 border-slate-300" },
+  met: { label: "Met", cls: "bg-met-bg text-met border-transparent" },
+  partial: { label: "Partly met", cls: "bg-partial-bg text-partial border-transparent" },
+  not_met: { label: "Missed", cls: "bg-sunken text-ink-muted border-line" },
 };
 
 export function StatusBadge({ status }: { status: CriterionStatus }) {
   const s = STATUS_STYLE[status];
-  return <span className={`inline-block whitespace-nowrap rounded border px-2 py-0.5 text-xs font-medium ${s.cls}`}>{s.label}</span>;
+  return <span className={`inline-block whitespace-nowrap rounded border px-2 py-0.5 text-xs font-semibold ${s.cls}`}>{s.label}</span>;
 }
 
 const CONFIDENCE_STYLE = {
-  high: "bg-emerald-50 text-emerald-800",
-  medium: "bg-amber-50 text-amber-900",
-  low: "bg-red-50 text-red-800",
+  high: "bg-met-bg text-met",
+  medium: "bg-partial-bg text-partial",
+  low: "bg-flag-bg text-flag",
 };
 
 type Props = {
@@ -30,8 +30,8 @@ type Props = {
 export default function AnalysisPanel({ answer, criteria, showBaseline, onRetry }: Props) {
   if (answer.analyzing) {
     return (
-      <div className="flex items-center gap-2 rounded-md border border-slate-200 p-4 text-sm text-slate-600" aria-live="polite">
-        <span className="h-4 w-4 animate-spin rounded-full border-2 border-slate-300 border-t-slate-700" />
+      <div className="card flex items-center gap-2 p-4 text-sm text-ink-muted" aria-live="polite">
+        <span className="h-4 w-4 animate-spin rounded-full border-2 border-line border-t-primary" />
         AI is reading this answer against the rubric...
       </div>
     );
@@ -39,7 +39,7 @@ export default function AnalysisPanel({ answer, criteria, showBaseline, onRetry 
 
   if (answer.analysisError || !answer.analysis) {
     return (
-      <div className="rounded-md border border-red-300 bg-red-50 p-4 text-sm text-red-800" role="alert">
+      <div className="callout callout-danger flex-col p-4" role="alert">
         <p className="font-medium">{answer.analysisError ? "AI analysis failed for this answer." : "Not analyzed yet."}</p>
         {answer.analysisError && <p className="mt-1">{answer.analysisError}</p>}
         <p className="mt-1">You can still read the answer and score it yourself.</p>
@@ -56,46 +56,49 @@ export default function AnalysisPanel({ answer, criteria, showBaseline, onRetry 
   return (
     <div className="space-y-3">
       {a.flag && (
-        <div className="rounded-md border border-amber-400 bg-amber-50 p-3 text-sm text-amber-900" role="status">
-          <span className="font-semibold">⚠ Needs a closer look:</span> {a.flagReason}
+        <div className="callout callout-flag" role="status">
+          <span className="text-flag" aria-hidden>⚠</span>
+          <span>
+            <span className="font-semibold">Needs a closer look:</span> {a.flagReason}
+          </span>
         </div>
       )}
 
       <div className="flex flex-wrap items-center gap-2 text-sm">
-        <span className="font-medium text-slate-700">AI highlights</span>
+        <span className="font-semibold text-ink">AI highlights</span>
         <span className={`rounded px-2 py-0.5 text-xs font-medium ${CONFIDENCE_STYLE[a.confidence]}`}>{a.confidence} confidence</span>
-        <span className="text-xs text-slate-500">Suggestions only. You decide the score.</span>
+        <span className="text-xs text-ink-muted">Suggestions only. You decide the score.</span>
       </div>
 
-      <ul className="divide-y divide-slate-200 rounded-md border border-slate-200">
+      <ul className="card divide-y divide-line">
         {criteria.map((c) => {
           const r = a.results.find((x) => x.criterionId === c.id);
           const b = baseline?.results.find((x) => x.criterionId === c.id);
           return (
-            <li key={c.id} className="p-3">
+            <li key={c.id} className="px-4 py-3">
               <div className="flex flex-wrap items-start justify-between gap-2">
-                <span className="text-sm font-medium">
-                  {c.description} <span className="font-normal text-slate-500">({c.points} pts)</span>
+                <span className="text-sm font-semibold">
+                  {c.description} <span className="font-normal text-ink-muted">({c.points} pts)</span>
                 </span>
                 <span className="flex items-center gap-2">
                   {r && <StatusBadge status={r.status} />}
                   {b && (
-                    <span className="flex items-center gap-1 text-xs text-slate-500">
+                    <span className="flex items-center gap-1 text-xs text-ink-muted">
                       keywords: <StatusBadge status={b.status} />
                     </span>
                   )}
                 </span>
               </div>
-              {r?.evidence && <blockquote className="mt-2 border-l-4 border-sky-300 bg-sky-50 px-3 py-1 text-sm italic">&ldquo;{r.evidence}&rdquo;</blockquote>}
-              {r?.note && <p className="mt-1 text-sm text-slate-600">{r.note}</p>}
-              {b && <p className="mt-1 text-xs text-slate-500">Keyword baseline: {b.note}{b.evidence ? ` (${b.evidence})` : ""}</p>}
+              {r?.evidence && <blockquote className="evidence mt-2">&ldquo;{r.evidence}&rdquo;</blockquote>}
+              {r?.note && <p className="mt-1 text-sm text-ink-muted">{r.note}</p>}
+              {b && <p className="mt-1 text-xs text-ink-muted">Keyword baseline: {b.note}{b.evidence ? ` (${b.evidence})` : ""}</p>}
             </li>
           );
         })}
       </ul>
 
-      <p className="text-sm text-slate-700">
-        <span className="font-medium">Summary:</span> {a.reason}
+      <p className="text-sm text-ink-muted">
+        <span className="font-semibold">Summary:</span> {a.reason}
       </p>
     </div>
   );

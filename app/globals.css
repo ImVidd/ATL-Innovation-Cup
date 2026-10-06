@@ -1,30 +1,194 @@
 @import "tailwindcss";
 
+/*
+ * TA Grader design system. Tokens mirror the design system's tokens.json (see DESIGN.md).
+ * Colours are CSS variables so the dark ("late night") theme follows the OS setting,
+ * or can be forced with <html data-theme="dark|light">.
+ * Use the semantic utilities (bg-paper, text-ink, border-line, bg-primary…),
+ * never raw Tailwind palette colours (slate-*, emerald-*…).
+ */
+
+:root {
+  --paper: #faf8f4;
+  --surface: #ffffff;
+  --surface-sunken: #f2efe8;
+  --line: #e3ded4;
+  --control: #848b92;
+  --ink: #1b2730;
+  --ink-muted: #56626b;
+  --primary: #1f4257;
+  --primary-hover: #2b5670;
+  --on-primary: #ffffff;
+  --marker: #f2c84b;
+  --highlight: #fcefc2;
+  --highlight-rule: #b3810f;
+  --met: #2e6b4e;
+  --met-bg: #e3f1e8;
+  --partial: #835500;
+  --partial-bg: #fbf0d9;
+  --flag: #a84b1f;
+  --flag-bg: #fbede4;
+  --danger: #a3242b;
+  --danger-bg: #fbe9ea;
+  --focus: #2f6f9a;
+  --float-shadow: 0 8px 24px -6px rgb(27 39 48 / 0.18);
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #121719;
+    --surface: #1a2125;
+    --surface-sunken: #0d1113;
+    --line: #2b353a;
+    --control: #6b787f;
+    --ink: #e9e6e0;
+    --ink-muted: #a5aeb3;
+    --primary: #9cc3d6;
+    --primary-hover: #b6d5e4;
+    --on-primary: #0f1e27;
+    --highlight: #3a3320;
+    --highlight-rule: #d9b44a;
+    --met: #8bcba8;
+    --met-bg: #1b3328;
+    --partial: #e2b866;
+    --partial-bg: #382d14;
+    --flag: #f0a57a;
+    --flag-bg: #3a2219;
+    --danger: #f2a0a2;
+    --danger-bg: #3b1d20;
+    --focus: #8cc4e8;
+    --float-shadow: 0 8px 24px -6px rgb(0 0 0 / 0.5);
+    color-scheme: dark;
+  }
+}
+
+:root[data-theme="dark"] {
+  --paper: #121719;
+  --surface: #1a2125;
+  --surface-sunken: #0d1113;
+  --line: #2b353a;
+  --control: #6b787f;
+  --ink: #e9e6e0;
+  --ink-muted: #a5aeb3;
+  --primary: #9cc3d6;
+  --primary-hover: #b6d5e4;
+  --on-primary: #0f1e27;
+  --highlight: #3a3320;
+  --highlight-rule: #d9b44a;
+  --met: #8bcba8;
+  --met-bg: #1b3328;
+  --partial: #e2b866;
+  --partial-bg: #382d14;
+  --flag: #f0a57a;
+  --flag-bg: #3a2219;
+  --danger: #f2a0a2;
+  --danger-bg: #3b1d20;
+  --focus: #8cc4e8;
+  --float-shadow: 0 8px 24px -6px rgb(0 0 0 / 0.5);
+  color-scheme: dark;
+}
+
 @theme inline {
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-public-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-serif: var(--font-newsreader), Georgia, "Times New Roman", serif;
+  --font-mono: var(--font-plex-mono), ui-monospace, Menlo, monospace;
+
+  --color-paper: var(--paper);
+  --color-surface: var(--surface);
+  --color-sunken: var(--surface-sunken);
+  --color-line: var(--line);
+  --color-control: var(--control);
+  --color-ink: var(--ink);
+  --color-ink-muted: var(--ink-muted);
+  --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
+  --color-on-primary: var(--on-primary);
+  --color-marker: var(--marker);
+  --color-highlight: var(--highlight);
+  --color-highlight-rule: var(--highlight-rule);
+  --color-met: var(--met);
+  --color-met-bg: var(--met-bg);
+  --color-partial: var(--partial);
+  --color-partial-bg: var(--partial-bg);
+  --color-flag: var(--flag);
+  --color-flag-bg: var(--flag-bg);
+  --color-danger: var(--danger);
+  --color-danger-bg: var(--danger-bg);
+  --color-focus: var(--focus);
+
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+
+  --shadow-float: var(--float-shadow);
 }
 
 body {
-  background: #ffffff;
-  color: #0f172a;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-sans);
 }
 
-/* Small set of shared form styles, used across components. */
+/* Header logo: show the mark that matches the active theme (same selectors as the tokens above). */
+.logo-dark {
+  display: none;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .logo-light {
+    display: none;
+  }
+  :root:not([data-theme="light"]) .logo-dark {
+    display: block;
+  }
+}
+:root[data-theme="dark"] .logo-light {
+  display: none;
+}
+:root[data-theme="dark"] .logo-dark {
+  display: block;
+}
+
+/* One focus treatment everywhere: 2px ring, 2px offset. */
+:where(a, button, input, textarea, select, summary, [tabindex]):focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+/* Shared component styles (names kept from the original app). */
 @layer components {
   .label {
-    @apply mb-1 block text-sm font-medium text-slate-800;
+    @apply mb-1 block text-sm font-semibold text-ink;
   }
   .hint {
-    @apply mb-1 block text-xs text-slate-500;
+    @apply mb-2 block text-xs text-ink-muted;
   }
   .input {
-    @apply block w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-slate-900 focus:border-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-300;
+    @apply block w-full rounded-md border border-control bg-surface px-3 py-2 text-ink placeholder:text-ink-muted focus:outline-2 focus:outline-offset-2 focus:outline-focus;
   }
   .btn-primary {
-    @apply rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-slate-400;
+    @apply inline-flex min-h-10 items-center justify-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-semibold text-on-primary transition-colors hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-50;
   }
   .btn-secondary {
-    @apply rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-800 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-slate-300;
+    @apply inline-flex min-h-10 items-center justify-center gap-2 rounded-md border border-control bg-surface px-4 py-2 text-sm font-semibold text-ink transition-colors hover:bg-sunken disabled:cursor-not-allowed disabled:opacity-50;
+  }
+  .card {
+    @apply rounded-lg border border-line bg-surface;
+  }
+  /* The student's own words quoted as evidence. Use for nothing else. */
+  .evidence {
+    @apply rounded-r-sm border-l-[3px] border-highlight-rule bg-highlight px-3 py-1 font-serif italic text-ink;
+  }
+  .callout {
+    @apply flex gap-2 rounded-md border px-4 py-3 text-sm text-ink;
+  }
+  .callout-flag {
+    @apply border-flag bg-flag-bg;
+  }
+  .callout-info {
+    @apply border-line bg-sunken;
+  }
+  .callout-danger {
+    @apply border-danger bg-danger-bg;
   }
 }

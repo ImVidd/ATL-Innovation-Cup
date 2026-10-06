@@ -5,6 +5,7 @@ import type { Answer, Session } from "@/lib/types";
 import GradeView from "./GradeView";
 import ResultsView from "./ResultsView";
 import SetupPanel, { type SetupInput } from "./SetupPanel";
+import ThemeToggle from "./ThemeToggle";
 
 type ServerStatus = { ai: "gemini" | "mock"; db: boolean };
 type View = "setup" | "grade" | "results";
@@ -195,48 +196,58 @@ export default function GraderApp() {
 
   return (
     <div className="mx-auto w-full max-w-5xl flex-1 px-4 py-6">
-      <header className="mb-6 flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 pb-4">
-        <div>
-          <h1 className="text-2xl font-bold">TA Grader</h1>
-          <p className="text-sm text-slate-600">AI highlights rubric matches. You decide every score.</p>
-        </div>
-        {session && (
-          <div className="flex flex-wrap gap-2">
-            <button type="button" className={view === "grade" ? "btn-primary" : "btn-secondary"} onClick={() => setView("grade")}>
-              Grade
-            </button>
-            <button type="button" className={view === "results" ? "btn-primary" : "btn-secondary"} onClick={() => setView("results")}>
-              Results &amp; export
-            </button>
-            <button type="button" className="btn-secondary" onClick={newSession}>
-              New question
-            </button>
+      <header className="mb-6 flex flex-wrap items-center justify-between gap-3 border-b border-line pb-4">
+        <div className="flex items-center gap-3">
+          {/* Both marks are rendered; globals.css shows the one for the active theme. Plain <img>: SVGs gain nothing from next/image. */}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/logo-mark.svg" alt="" width={40} height={40} className="logo-light h-10 w-10" />
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/logo-mark-dark.svg" alt="" width={40} height={40} className="logo-dark h-10 w-10" />
+          <div>
+            <h1 className="font-serif text-[26px] leading-[30px] font-semibold tracking-tight">TA Grader</h1>
+            <p className="text-sm text-ink-muted">AI highlights rubric matches. You decide every score.</p>
           </div>
-        )}
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {session && (
+            <>
+              <button type="button" className={view === "grade" ? "btn-primary" : "btn-secondary"} onClick={() => setView("grade")}>
+                Grade
+              </button>
+              <button type="button" className={view === "results" ? "btn-primary" : "btn-secondary"} onClick={() => setView("results")}>
+                Results &amp; export
+              </button>
+              <button type="button" className="btn-secondary" onClick={newSession}>
+                New question
+              </button>
+            </>
+          )}
+          <ThemeToggle />
+        </div>
       </header>
 
       {status?.ai === "mock" && (
-        <div className="mb-4 rounded-md border border-amber-400 bg-amber-50 p-3 text-sm text-amber-900" role="status">
+        <div className="mb-4 callout callout-info" role="status">
           <strong>Mock mode: AI results are fake.</strong> No Gemini API key is set on the server.
         </div>
       )}
       {notice && (
-        <div className="mb-4 rounded-md border border-red-300 bg-red-50 p-3 text-sm text-red-800" role="alert">
+        <div className="mb-4 callout callout-danger" role="alert">
           {notice}
         </div>
       )}
 
       {session && view !== "setup" && (
-        <div className="mb-6 space-y-2 rounded-md bg-slate-50 p-4">
-          <p className="font-medium">{session.question || "(no question text)"}</p>
-          <p className="text-sm text-slate-600">
-            {totalPoints} points possible · {session.answers.length} answers · <strong>{scoredCount} of {session.answers.length} scored</strong> ·{" "}
+        <div className="mb-6 space-y-2 rounded-lg bg-sunken px-5 py-4">
+          <p className="font-serif text-xl leading-7">{session.question || "(no question text)"}</p>
+          <p className="text-sm text-ink-muted">
+            {totalPoints} points possible · {session.answers.length} answers · <strong className="font-semibold text-ink">{scoredCount} of {session.answers.length} scored</strong> ·{" "}
             {flaggedCount} flagged
           </p>
-          <div className="h-2 w-full overflow-hidden rounded bg-slate-200" aria-hidden>
-            <div className="h-full bg-emerald-500 transition-all" style={{ width: `${(scoredCount / session.answers.length) * 100}%` }} />
+          <div className="h-2 w-full overflow-hidden rounded-full bg-line" aria-hidden>
+            <div className="h-full rounded-full bg-met transition-all" style={{ width: `${(scoredCount / session.answers.length) * 100}%` }} />
           </div>
-          <p className="text-xs text-slate-500">
+          <p className="text-xs text-ink-muted">
             {saved ? "Saved. Bookmark this page's link to come back to this session." : "Not saved to a server. Refreshing the page clears your work."}
           </p>
         </div>
@@ -270,7 +281,7 @@ export default function GraderApp() {
 
       {toast && (
         <div
-          className="fixed bottom-4 left-1/2 z-50 -translate-x-1/2 rounded-md bg-emerald-700 px-4 py-2 text-sm font-medium text-white shadow-lg"
+          className="fixed bottom-4 left-1/2 z-50 -translate-x-1/2 rounded-md bg-primary px-4 py-2 text-sm font-semibold text-on-primary shadow-float"
           role="status"
           aria-live="polite"
         >
@@ -278,7 +289,7 @@ export default function GraderApp() {
         </div>
       )}
 
-      <footer className="mt-10 border-t border-slate-200 pt-4 text-xs text-slate-500">
+      <footer className="mt-10 border-t border-line pt-4 text-xs text-ink-muted">
         AI suggestions only. The grader decides every score. Use fake or anonymized answers: do not enter student names or IDs.
         Answers are sent to Google Gemini for analysis{status?.db ? " and saved to the team's database" : ""}.
       </footer>
