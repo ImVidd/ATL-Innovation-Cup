@@ -44,12 +44,21 @@ export const viewport: Viewport = {
   ],
 };
 
+// Applies the theme saved by components/ThemeToggle.tsx before first paint, so there is no flash.
+// With no saved choice, the page follows the OS setting (see globals.css).
+const THEME_INIT_SCRIPT = `try{var t=localStorage.getItem("ta-grader-theme");if(t==="light"||t==="dark")document.documentElement.dataset.theme=t}catch(e){}`;
+
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="en"
       className={`${publicSans.variable} ${newsreader.variable} ${plexMono.variable} h-full antialiased`}
+      // The script below sets data-theme before React hydrates, so the attribute differs from the server HTML.
+      suppressHydrationWarning
     >
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
+      </head>
       <body className="min-h-full flex flex-col">{children}</body>
     </html>
   );

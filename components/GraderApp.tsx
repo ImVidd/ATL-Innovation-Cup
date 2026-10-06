@@ -5,6 +5,7 @@ import type { Answer, Session } from "@/lib/types";
 import GradeView from "./GradeView";
 import ResultsView from "./ResultsView";
 import SetupPanel, { type SetupInput } from "./SetupPanel";
+import ThemeToggle from "./ThemeToggle";
 
 type ServerStatus = { ai: "gemini" | "mock"; db: boolean };
 type View = "setup" | "grade" | "results";
@@ -197,28 +198,32 @@ export default function GraderApp() {
     <div className="mx-auto w-full max-w-5xl flex-1 px-4 py-6">
       <header className="mb-6 flex flex-wrap items-center justify-between gap-3 border-b border-line pb-4">
         <div className="flex items-center gap-3">
-          <picture>
-            <source srcSet="/logo-mark-dark.svg" media="(prefers-color-scheme: dark)" />
-            <img src="/logo-mark.svg" alt="" width={40} height={40} className="h-10 w-10" />
-          </picture>
+          {/* Both marks are rendered; globals.css shows the one for the active theme. Plain <img>: SVGs gain nothing from next/image. */}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/logo-mark.svg" alt="" width={40} height={40} className="logo-light h-10 w-10" />
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/logo-mark-dark.svg" alt="" width={40} height={40} className="logo-dark h-10 w-10" />
           <div>
             <h1 className="font-serif text-[26px] leading-[30px] font-semibold tracking-tight">TA Grader</h1>
             <p className="text-sm text-ink-muted">AI highlights rubric matches. You decide every score.</p>
           </div>
         </div>
-        {session && (
-          <div className="flex flex-wrap gap-2">
-            <button type="button" className={view === "grade" ? "btn-primary" : "btn-secondary"} onClick={() => setView("grade")}>
-              Grade
-            </button>
-            <button type="button" className={view === "results" ? "btn-primary" : "btn-secondary"} onClick={() => setView("results")}>
-              Results &amp; export
-            </button>
-            <button type="button" className="btn-secondary" onClick={newSession}>
-              New question
-            </button>
-          </div>
-        )}
+        <div className="flex flex-wrap gap-2">
+          {session && (
+            <>
+              <button type="button" className={view === "grade" ? "btn-primary" : "btn-secondary"} onClick={() => setView("grade")}>
+                Grade
+              </button>
+              <button type="button" className={view === "results" ? "btn-primary" : "btn-secondary"} onClick={() => setView("results")}>
+                Results &amp; export
+              </button>
+              <button type="button" className="btn-secondary" onClick={newSession}>
+                New question
+              </button>
+            </>
+          )}
+          <ThemeToggle />
+        </div>
       </header>
 
       {status?.ai === "mock" && (
