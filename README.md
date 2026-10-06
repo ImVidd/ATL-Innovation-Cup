@@ -76,7 +76,7 @@ npm run build
 
 ## Decisions
 
-- **Gemini instead of Claude/OpenAI:** free tier, team choice. Provider code is isolated in `lib/ai.ts`.
+- **Gemini as the AI provider:** free tier, team choice. Provider code is isolated in `lib/ai.ts`.
 - **Supabase is optional:** the app works without it, so a missing key never blocks a demo. With it, sessions survive refresh via a `?s=<id>` link. No logins: anyone with a session link can open it, so **use fake data only**.
 - **One answer per API request:** failures stay isolated, and requests stay under Vercel's time limit.
 - **No AI score, ever:** the prompt forbids it, and the app has no field for one.
