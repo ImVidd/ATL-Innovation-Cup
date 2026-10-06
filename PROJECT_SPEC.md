@@ -1,8 +1,5 @@
 # PROJECT_SPEC.md — 404 Techies · ATL Innovation Cup 2026
 
-> Put this file in the root of the GitHub repo. In Claude Code, start with:
-> **"Read PROJECT_SPEC.md fully, then build Slice 1. Run it and test it before telling me it's done."**
-
 ---
 
 ## 1. What we are building (one paragraph)
@@ -44,7 +41,7 @@ A web app that helps graduate TAs and professors grade **written exam answers** 
 
 - **Next.js (App Router) + TypeScript**, Tailwind CSS for styling.
 - One API route: `POST /api/analyze`.
-- **AI provider: Anthropic API** via the official `@anthropic-ai/sdk`. Model is set by env var `ANTHROPIC_MODEL` (suggested default: `claude-sonnet-5-5`; can switch to `claude-haiku-4-5-20251001` to cut cost). Keep provider calls isolated in `lib/ai.ts` so swapping providers is easy.
+- **AI provider: Google Gemini** via the official `@google/genai` SDK. Model is set by env var `GEMINI_MODEL` (default: `gemini-flash-latest`). Keep provider calls isolated in `lib/ai.ts` so swapping providers is easy.
 - **Tests:** Vitest for unit tests.
 - **Hosting:** Vercel (deploy from GitHub).
 - No database. No auth for now.
@@ -53,8 +50,8 @@ A web app that helps graduate TAs and professors grade **written exam answers** 
 
 ```
 Environment variables (.env.local, never committed)
-ANTHROPIC_API_KEY=
-ANTHROPIC_MODEL=claude-sonnet-5-5
+GEMINI_API_KEY=
+GEMINI_MODEL=gemini-flash-latest
 MOCK_AI=false
 ```
 
@@ -224,7 +221,7 @@ Expected behavior: S1 meets all criteria; S2 partial on definition and example, 
 - **Done when:** `npm run dev` works, the sample data loads with one click, results render, `npm test` passes, and the README explains how to run it.
 
 ### Slice 2 (real AI)
-- `/api/analyze` with the Anthropic SDK, zod validation, retry-once, batching, limits.
+- `/api/analyze` with the Gemini SDK, zod validation, retry-once, batching, limits.
 - Wire the UI to the API with per-answer loading and per-answer error states.
 - Handle all failure states in §3.
 - **Done when:** with a real key, the sample data produces the expected behavior in §10 (especially S3 and S4).
