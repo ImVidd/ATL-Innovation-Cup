@@ -29,7 +29,7 @@ Use the semantic Tailwind utilities below. Do not use raw palette colours (`slat
 
 Example: `bg-surface text-ink border-line`, `bg-primary text-on-primary hover:bg-primary-hover`.
 
-Dark mode ("late night") follows the OS setting automatically. To force a theme, set `data-theme="dark"` or `data-theme="light"` on `<html>`.
+Dark mode ("late night") follows the OS setting until the grader picks a theme with the header toggle (`components/ThemeToggle.tsx`). The choice is saved in the browser and applied as `data-theme="dark"` or `data-theme="light"` on `<html>`.
 
 ## Type
 
