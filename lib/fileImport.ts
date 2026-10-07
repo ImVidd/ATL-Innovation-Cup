@@ -40,8 +40,8 @@ export function parseCsv(text: string): string[][] {
   return rows.map((r) => r.map((c) => c.trim())).filter((r) => r.some((c) => c !== ""));
 }
 
-const isNumber = (s: string) => /^\d+(\.\d+)?$/.test(s.replace(/\s*(pts?|points?)$/i, ""));
-const toNumber = (s: string) => Number(s.replace(/\s*(pts?|points?)$/i, ""));
+const isNumber = (s: string) => /^\d+(\.\d+)?$/.test(s.replace(/\s*(pts?|points?|marks?)$/i, ""));
+const toNumber = (s: string) => Number(s.replace(/\s*(pts?|points?|marks?)$/i, ""));
 
 // Rubric CSV: each row has a points cell and a description, in either order. Header rows are skipped.
 export function rubricTextFromCsv(text: string): string {

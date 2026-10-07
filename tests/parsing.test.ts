@@ -26,10 +26,51 @@ describe("parseRubric", () => {
     ]);
   });
 
-  it("ignores blank lines and reports bad lines by line number", () => {
+  it("ignores blank lines, skips lines without a mark, and reports a zero mark by line number", () => {
     const r = parseRubric("\n2 | Good line\n\nno points here\n0 | zero points");
     expect(r.criteria).toHaveLength(1);
-    expect(r.errors.map((e) => e.line)).toEqual([4, 5]);
+    expect(r.skipped).toEqual([{ line: 4, text: "no points here" }]);
+    expect(r.errors.map((e) => e.line)).toEqual([5]);
+  });
+
+  it("accepts marks in brackets, before or after the description", () => {
+    const r = parseRubric("Defines the term (2 marks)\nGives an example [1]\n(3 marks) Explains the cause\nNames a source 1 mark");
+    expect(r.errors).toEqual([]);
+    expect(r.skipped).toEqual([]);
+    expect(r.criteria.map((c) => [c.points, c.description])).toEqual([
+      [2, "Defines the term"],
+      [1, "Gives an example"],
+      [3, "Explains the cause"],
+      [1, "Names a source"],
+    ]);
+  });
+
+  it("skips headings and subheadings instead of flagging them", () => {
+    const r = parseRubric("Part A: Definitions\n2 | Defines the term\n1. Application\nGives an example (2 marks)\nSection 2");
+    expect(r.errors).toEqual([]);
+    expect(r.criteria.map((c) => c.description)).toEqual(["Defines the term", "Gives an example"]);
+    expect(r.skipped.map((s) => s.line)).toEqual([1, 3, 5]);
+    expect(r.totalPoints).toBe(4);
+  });
+
+  it("reads a table pasted from Word or Excel (tab-separated), skipping the header row", () => {
+    const r = parseRubric("Criterion\tMarks\nDefines the term\t2\nGives an example\t1.5 marks\n3\tExplains the cause\tWith evidence");
+    expect(r.errors).toEqual([]);
+    expect(r.skipped).toEqual([{ line: 1, text: "Criterion\tMarks" }]);
+    expect(r.criteria.map((c) => [c.points, c.description])).toEqual([
+      [2, "Defines the term"],
+      [1.5, "Gives an example"],
+      [3, "Explains the cause - With evidence"],
+    ]);
+  });
+
+  it("reads a Markdown table", () => {
+    const r = parseRubric("| Criterion | Marks |\n|---|---|\n| Defines the term | 2 |\n| Gives an example | 1 |");
+    expect(r.criteria.map((c) => [c.points, c.description])).toEqual([
+      [2, "Defines the term"],
+      [1, "Gives an example"],
+    ]);
+    expect(r.skipped.map((s) => s.line)).toEqual([1]);
   });
 
   it("returns nothing for empty input", () => {

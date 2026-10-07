@@ -129,7 +129,7 @@ Implementation notes:
 - Analyze answers in small parallel batches (e.g., 3 at a time) to stay fast but avoid rate limits. One model call **per answer** keeps failures isolated.
 - Validate every model response against a schema (use `zod`). On failure: retry once, then put an entry in `errors` for that answer only.
 - Do not log request bodies or answer text. Log only counts, timings, and error types.
-- Enforce reasonable limits: max 60 answers per request, max ~3,000 characters per answer. Return a clear 400 error beyond that.
+- Enforce reasonable limits: max 60 answers per request, max 10,000 characters per answer. Return a clear 400 error beyond that.
 - If `MOCK_AI=true` or no API key: return deterministic fake analyses (see §8).
 
 ## 7. The AI prompt (put in `lib/prompt.ts`)
