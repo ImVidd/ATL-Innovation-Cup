@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { mergeSession } from "@/lib/mergeSession";
 import type { Answer, Session } from "@/lib/types";
 import GradeView from "./GradeView";
 import ResultsView from "./ResultsView";
@@ -29,6 +30,8 @@ export default function GraderApp() {
   const sessionRef = useRef<Session | null>(null);
   const savedRef = useRef(false);
   const timerStartRef = useRef<number | null>(null);
+  // Goes up when the question or rubric is edited, so AI results for the old rubric are dropped.
+  const rubricVersionRef = useRef(0);
   useEffect(() => {
     sessionRef.current = session;
   }, [session]);
@@ -76,6 +79,7 @@ export default function GraderApp() {
   }, [answerOnScreen]);
 
   async function analyzeOne(s: Session, answer: Answer) {
+    const rubricVersion = rubricVersionRef.current;
     updateAnswer(answer.id, { analyzing: true, analysisError: undefined });
     try {
       const res = await fetch("/api/analyze", {
@@ -90,8 +94,10 @@ export default function GraderApp() {
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error || `Request failed (${res.status}).`);
+      if (rubricVersion !== rubricVersionRef.current) return; // rubric edited meanwhile; a fresh analysis is on its way
       updateAnswer(answer.id, { analyzing: false, analysis: data.analysis });
     } catch (e) {
+      if (rubricVersion !== rubricVersionRef.current) return;
       const message = e instanceof Error && e.message !== "Failed to fetch" ? e.message : "Network error. Check your connection.";
       updateAnswer(answer.id, { analyzing: false, analysisError: message });
     }
@@ -138,6 +144,69 @@ export default function GraderApp() {
     if (ok) window.history.replaceState(null, "", `?s=${s.id}`);
 
     analyzeMany(s, s.answers);
+  }
+
+  // "Edit setup": apply changes to the session in progress. Unchanged answers keep their scores,
+  // and only new answers (or all of them, if the question or rubric changed) go back to the AI.
+  async function updateSession(input: SetupInput) {
+    const old = sessionRef.current;
+    if (!old) return;
+    const m = mergeSession(old, input, () => crypto.randomUUID());
+
+    const losses: string[] = [];
+    if (m.removedScored > 0) losses.push(`${m.removedScored} answer${m.removedScored === 1 ? "" : "s"} you already scored will be removed (removed or reworded answers lose their score)`);
+    if (m.scoresCleared > 0) losses.push(`${m.scoresCleared} score${m.scoresCleared === 1 ? "" : "s"} above the new total of marks will be cleared`);
+    if (losses.length > 0 && !window.confirm(`${losses.join(", and ")}. Continue?`)) return;
+
+    if (m.rubricChanged) rubricVersionRef.current++;
+    const s = m.session;
+    setSession(s);
+    const firstUnscored = s.answers.findIndex((a) => a.finalScore === null || a.finalScore === undefined);
+    setCurrent(firstUnscored === -1 ? 0 : firstUnscored);
+    setView("grade");
+    setNotice(null);
+
+    const parts = [`${m.kept} answer${m.kept === 1 ? "" : "s"} kept`];
+    if (m.added > 0) parts.push(`${m.added} added`);
+    if (m.removed > 0) parts.push(`${m.removed} removed`);
+    if (m.rubricChanged) parts.push("rubric changed, so the AI is re-reading every answer");
+    showToast(`✓ Setup updated · ${parts.join(" · ")}`);
+
+    if (savedRef.current) {
+      let ok = false;
+      try {
+        const res = await fetch(`/api/sessions/${s.id}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            question: s.question,
+            rubricText: s.rubricText,
+            criteria: s.criteria,
+            answers: s.answers.map((a) => ({
+              id: a.id,
+              label: a.label,
+              text: a.text,
+              analysis: a.analysis ?? null,
+              finalScore: a.finalScore ?? null,
+              graderNote: a.graderNote ?? "",
+              secondsSpent: a.secondsSpent,
+            })),
+          }),
+        });
+        ok = res.ok && Boolean((await res.json()).saved);
+      } catch {
+        ok = false;
+      }
+      if (!ok) {
+        // The server copy is now out of date, so stop writing scores to it.
+        savedRef.current = false;
+        setSaved(false);
+        window.history.replaceState(null, "", window.location.pathname);
+        setNotice("Could not save these changes to the server. You can keep grading, but refreshing will lose your work.");
+      }
+    }
+
+    analyzeMany(s, s.answers.filter((a) => m.analyzeIds.includes(a.id)));
   }
 
   function showToast(text: string) {
@@ -217,6 +286,9 @@ export default function GraderApp() {
               <button type="button" className={view === "results" ? "btn-primary" : "btn-secondary"} onClick={() => setView("results")}>
                 Results &amp; export
               </button>
+              <button type="button" className={view === "setup" ? "btn-primary" : "btn-secondary"} onClick={() => setView("setup")}>
+                Edit setup
+              </button>
               <button type="button" className="btn-secondary" onClick={newSession}>
                 New question
               </button>
@@ -253,8 +325,15 @@ export default function GraderApp() {
         </div>
       )}
 
-      {view === "setup" || !session ? (
+      {!session ? (
         <SetupPanel onStart={startSession} />
+      ) : view === "setup" ? (
+        <SetupPanel
+          key={session.id}
+          onStart={updateSession}
+          initial={{ question: session.question, rubricText: session.rubricText, answersText: session.answers.map((a) => a.text).join("\n---\n") }}
+          onCancel={() => setView("grade")}
+        />
       ) : view === "grade" ? (
         <GradeView
           session={session}

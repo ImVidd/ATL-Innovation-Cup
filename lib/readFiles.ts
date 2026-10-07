@@ -39,7 +39,7 @@ async function askAi(body: object, fileName: string): Promise<RubricFileResult> 
 // (a Word table, free-form text) goes to the AI to be turned into rubric lines.
 async function fromText(text: string, fileName: string): Promise<RubricFileResult> {
   const parsed = parseRubric(text);
-  if (parsed.criteria.length > 0 && parsed.errors.length === 0) {
+  if (parsed.criteria.length > 0 && parsed.errors.length === 0 && parsed.skipped.length <= parsed.criteria.length) {
     return { rubricText: text.trim().replace(/\n\s*\n/g, "\n"), question: "", note: `Loaded from ${fileName}.` };
   }
   return askAi({ text: text.slice(0, 20_000) }, fileName);
@@ -75,6 +75,12 @@ export async function readRubricFile(file: File): Promise<RubricFileResult> {
   };
   if (mimeByExt[ext]) return askAi({ mimeType: mimeByExt[ext], dataBase64: await toBase64(file) }, file.name);
   throw new Error("Unsupported file type. Use PDF, Word (.docx), a photo, TXT or CSV.");
+}
+
+// The rubric box's "Structure with AI" button: turns whatever the grader typed or pasted
+// (a description of the marking scheme, a messy table) into rubric lines.
+export function structureRubricText(text: string): Promise<RubricFileResult> {
+  return askAi({ text: text.slice(0, 20_000) }, "your text");
 }
 
 // Answers file: .txt (answers separated by ---) or .csv (one answer per row).

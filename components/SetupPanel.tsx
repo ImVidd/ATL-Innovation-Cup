@@ -3,7 +3,7 @@
 import { useRef, useState } from "react";
 import { MAX_ANSWERS, MAX_ANSWER_CHARS } from "@/lib/limits";
 import { parseRubric } from "@/lib/parseRubric";
-import { ANSWERS_ACCEPT, RUBRIC_ACCEPT, readAnswersFile, readRubricFile } from "@/lib/readFiles";
+import { ANSWERS_ACCEPT, RUBRIC_ACCEPT, readAnswersFile, readRubricFile, structureRubricText } from "@/lib/readFiles";
 import { SAMPLE_ANSWERS, SAMPLE_QUESTION, SAMPLE_RUBRIC } from "@/lib/sampleData";
 import { splitAnswers } from "@/lib/splitAnswers";
 import type { Criterion } from "@/lib/types";
@@ -13,6 +13,15 @@ export type SetupInput = {
   rubricText: string;
   criteria: Criterion[];
   answerTexts: string[];
+};
+
+// When editing a session in progress, the boxes start filled in with its current content.
+export type SetupInitial = { question: string; rubricText: string; answersText: string };
+
+type Props = {
+  onStart: (input: SetupInput) => void;
+  initial?: SetupInitial;
+  onCancel?: () => void;
 };
 
 type FileStatus = { kind: "loading" | "ok" | "error"; message: string } | null;
@@ -52,10 +61,13 @@ function UploadButton({ label, accept, onFile, disabled }: { label: string; acce
   );
 }
 
-export default function SetupPanel({ onStart }: { onStart: (input: SetupInput) => void }) {
-  const [question, setQuestion] = useState("");
-  const [rubricText, setRubricText] = useState("");
-  const [answersText, setAnswersText] = useState("");
+export default function SetupPanel({ onStart, initial, onCancel }: Props) {
+  const editing = Boolean(initial);
+  const [question, setQuestion] = useState(initial?.question ?? "");
+  const [rubricText, setRubricText] = useState(initial?.rubricText ?? "");
+  const [answersText, setAnswersText] = useState(initial?.answersText ?? "");
+  // The grader's own rubric text from before "Structure with AI" replaced it, for Undo.
+  const [rubricBeforeAi, setRubricBeforeAi] = useState<string | null>(null);
   const [submitted, setSubmitted] = useState(false);
   const [rubricStatus, setRubricStatus] = useState<FileStatus>(null);
   const [answersStatus, setAnswersStatus] = useState<FileStatus>(null);
@@ -68,7 +80,11 @@ export default function SetupPanel({ onStart }: { onStart: (input: SetupInput) =
 
   const problems: string[] = [];
   if (rubric.criteria.length === 0 && rubric.errors.length === 0) {
-    problems.push('Add at least one rubric line, for example "2 | Defines operant conditioning".');
+    problems.push(
+      rubric.skipped.length > 0
+        ? 'No marks found in the rubric. Add a mark to each line, for example "2 | Defines operant conditioning", or click "Structure with AI".'
+        : 'Add at least one rubric line, for example "2 | Defines operant conditioning".',
+    );
   }
   if (rubric.errors.length > 0) problems.push("Fix the rubric lines marked above.");
   if (answers.length === 0) problems.push("Add at least one student answer.");
@@ -95,6 +111,27 @@ export default function SetupPanel({ onStart }: { onStart: (input: SetupInput) =
     }
   }
 
+  async function structureRubric() {
+    const original = rubricText;
+    setRubricStatus({ kind: "loading", message: "AI is structuring your rubric..." });
+    try {
+      const r = await structureRubricText(original);
+      setRubricBeforeAi(original);
+      setRubricText(r.rubricText);
+      if (r.question && !question.trim()) setQuestion(r.question);
+      setRubricStatus({ kind: "ok", message: r.note.replace("Read by AI from your text.", "Structured by AI.") });
+    } catch (e) {
+      setRubricStatus({ kind: "error", message: e instanceof Error ? e.message : "Could not structure the rubric." });
+    }
+  }
+
+  function undoStructure() {
+    if (rubricBeforeAi === null) return;
+    setRubricText(rubricBeforeAi);
+    setRubricBeforeAi(null);
+    setRubricStatus(null);
+  }
+
   async function uploadAnswers(file: File) {
     setAnswersStatus({ kind: "loading", message: `Reading ${file.name}...` });
     try {
@@ -117,12 +154,18 @@ export default function SetupPanel({ onStart }: { onStart: (input: SetupInput) =
     <form onSubmit={start} className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h2 className="font-serif text-[34px] leading-10 font-semibold tracking-tight">Set up one question</h2>
-          <p className="text-sm text-ink-muted">Paste or upload the question, rubric, and typed answers. Answers are labeled S1, S2, ... automatically.</p>
+          <h2 className="font-serif text-[34px] leading-10 font-semibold tracking-tight">{editing ? "Edit setup" : "Set up one question"}</h2>
+          <p className="text-sm text-ink-muted">
+            {editing
+              ? "Add, remove or fix answers, or correct the rubric. Answers you leave unchanged keep their scores."
+              : "Paste or upload the question, rubric, and typed answers. Answers are labeled S1, S2, ... automatically."}
+          </p>
         </div>
-        <button type="button" onClick={insertSample} className="btn-secondary">
-          Insert sample (fake data)
-        </button>
+        {!editing && (
+          <button type="button" onClick={insertSample} className="btn-secondary">
+            Insert sample (fake data)
+          </button>
+        )}
       </div>
 
       <label className="block">
@@ -141,11 +184,23 @@ export default function SetupPanel({ onStart }: { onStart: (input: SetupInput) =
           <label htmlFor="rubric" className="label">
             Rubric (one criterion per line)
           </label>
-          <UploadButton label="Upload rubric (PDF, Word, photo, TXT, CSV)" accept={RUBRIC_ACCEPT} onFile={uploadRubric} disabled={rubricStatus?.kind === "loading"} />
+          <span className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              className="btn-secondary !px-3 !py-1 text-xs"
+              onClick={structureRubric}
+              disabled={!rubricText.trim() || rubricStatus?.kind === "loading"}
+            >
+              Structure with AI
+            </button>
+            <UploadButton label="Upload rubric (PDF, Word, photo, TXT, CSV)" accept={RUBRIC_ACCEPT} onFile={uploadRubric} disabled={rubricStatus?.kind === "loading"} />
+          </span>
         </div>
         <span className="hint">
-          Format: <code>points | description</code>, e.g. <code>2 | Gives a correct example</code>. &quot;Names the cause: 2 pts&quot; also works.
-          Uploaded PDFs, photos and Word files are read by AI into this format so you can check and edit them.
+          Format: <code>Mark | Description</code>, e.g. <code>2 | Gives a correct example</code>. &quot;Gives a correct example (2 marks)&quot; and
+          tables pasted from Word or Excel also work. Lines without a mark, such as headings, are skipped. Or describe the marking scheme in
+          your own words and click <strong>Structure with AI</strong>; uploaded PDFs, photos and Word files are read the same way. Check the
+          result before grading.
         </span>
         <textarea
           id="rubric"
@@ -156,9 +211,26 @@ export default function SetupPanel({ onStart }: { onStart: (input: SetupInput) =
           placeholder={"2 | Defines operant conditioning\n2 | Gives a correct example\n1 | Mentions reinforcement or punishment"}
         />
         <StatusLine status={rubricStatus} />
+        {rubricBeforeAi !== null && (
+          <button type="button" className="mt-1 block text-sm font-semibold text-primary underline" onClick={undoStructure}>
+            Undo: bring back my original text
+          </button>
+        )}
         {rubric.criteria.length > 0 && (
           <span className="mt-1 block text-sm text-ink-muted">
             {rubric.criteria.length} criteria · {rubric.totalPoints} points total
+          </span>
+        )}
+        {rubric.skipped.length > 0 && (
+          <span className="mt-1 block text-sm text-ink-muted" role="status">
+            {rubric.skipped.length} line{rubric.skipped.length === 1 ? "" : "s"} without a mark skipped (treated as{" "}
+            {rubric.skipped.length === 1 ? "a heading" : "headings"}):{" "}
+            {rubric.skipped
+              .slice(0, 5)
+              .map((s) => `line ${s.line} "${s.text.length > 40 ? `${s.text.slice(0, 40)}…` : s.text}"`)
+              .join(", ")}
+            {rubric.skipped.length > 5 ? `, and ${rubric.skipped.length - 5} more` : ""}. To count one as a criterion, add a mark, e.g.{" "}
+            <code>2 | Description</code>.
           </span>
         )}
         {rubric.errors.map((err) => (
@@ -198,9 +270,16 @@ export default function SetupPanel({ onStart }: { onStart: (input: SetupInput) =
         </ul>
       )}
 
-      <button type="submit" className="btn-primary min-h-12 w-full px-6 text-base sm:w-auto">
-        Start grading{answers.length > 0 ? ` ${answers.length} answer${answers.length === 1 ? "" : "s"}` : ""}
-      </button>
+      <div className="flex flex-wrap gap-3">
+        <button type="submit" className="btn-primary min-h-12 w-full px-6 text-base sm:w-auto">
+          {editing ? "Save changes and continue grading" : `Start grading${answers.length > 0 ? ` ${answers.length} answer${answers.length === 1 ? "" : "s"}` : ""}`}
+        </button>
+        {onCancel && (
+          <button type="button" className="btn-secondary min-h-12 w-full px-6 text-base sm:w-auto" onClick={onCancel}>
+            Cancel
+          </button>
+        )}
+      </div>
     </form>
   );
 }
