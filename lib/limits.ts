@@ -2,7 +2,7 @@ import { z } from "zod";
 
 // Input limits, shared by the UI (to show errors early) and the API (to enforce them).
 export const MAX_ANSWERS = 60;
-export const MAX_ANSWER_CHARS = 3000;
+export const MAX_ANSWER_CHARS = 10_000; // about 1,600 words
 export const MAX_CRITERIA = 20;
 export const MAX_QUESTION_CHARS = 2000;
 

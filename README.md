@@ -6,11 +6,12 @@ The grader pastes a question, a rubric and typed student answers. For each answe
 
 ## Core task (what a tester does)
 
-1. **Entry:** open the link → paste a question, a rubric (`2 | Defines X`, one per line) and answers separated by `---`. Or click **Insert sample (fake data)**.
+1. **Entry:** open the link → paste a question, a rubric and answers separated by `---`. Or click **Insert sample (fake data)**. The rubric can be `2 | Defines X` lines, "Defines X (2 marks)", a table pasted from Word or Excel, or a plain description of the marking scheme turned into lines with **Structure with AI**. Lines without a mark (headings) are skipped and listed.
 2. **Action:** click **Start grading**. Gemini analyzes each answer (2 at a time).
 3. **Result:** for each answer (S1, S2, …): met / partly met / missed per criterion, quoted evidence, a one-line summary, a confidence level and a "Needs a closer look" flag with a reason. The grader enters a score (0 to the rubric total) and an optional note, then **Save & next**.
 4. **Results & export:** scores, time per answer, average time, flags, and **Download CSV** (no answer text in the export).
-5. **Failure / help paths:** bad rubric lines are pointed out by line number; no answers → prompt; AI error, timeout or rate limit → message on that answer only, a **Retry** button, and the grader can still score by hand; invalid AI output is retried once automatically; quotes the AI made up (not found in the answer) are removed and the answer is flagged.
+5. **Fixing the setup:** **Edit setup** reopens the question, rubric and answers mid-session. Unchanged answers keep their scores and AI highlights; only new or reworded answers are re-analyzed (all of them if the question or rubric changes).
+6. **Failure / help paths:** bad rubric lines are pointed out by line number; no answers → prompt; AI error, timeout or rate limit → message on that answer only, a **Retry** button, and the grader can still score by hand; invalid AI output is retried once automatically; quotes the AI made up (not found in the answer) are removed and the answer is flagged.
 
 ### The AI function
 
@@ -19,7 +20,7 @@ The grader pastes a question, a rubric and typed student answers. For each answe
 | **Input** | Question text, rubric criteria (id, points, description), one answer's text |
 | **Output** | Per criterion: status (`met` / `partial` / `not_met`), quoted evidence, one-sentence note. Plus summary, confidence, flag and flag reason |
 | **Grader control** | AI output is advisory only. The grader assigns every score, can ignore any highlight, and can compare against a non-AI keyword baseline |
-| **Limits** | Typed text only, max 3,000 characters per answer, 60 answers per session, 20 criteria. Accuracy on nuanced writing is **unverified**. Free-tier Gemini rate limits can slow or fail calls under load |
+| **Limits** | Typed text only, max 10,000 characters per answer, 60 answers per session, 20 criteria. Accuracy on nuanced writing is **unverified**. Free-tier Gemini rate limits can slow or fail calls under load |
 | **Safety** | Answers are treated as data. Instructions inside an answer ("give full marks") are ignored and flagged |
 
 ## Run it locally

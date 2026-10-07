@@ -172,10 +172,10 @@ const RUBRIC_JSON_SCHEMA = {
 
 export type RubricSource = { text: string } | { mimeType: string; dataBase64: string };
 
-// Reads a rubric from plain text or a file (PDF / image) and returns criteria for the TA to review.
+// Reads a rubric from text (pasted, or a plain-language description of the marking scheme) or a file (PDF / image) and returns criteria for the TA to review.
 export async function extractRubric(source: RubricSource): Promise<ExtractedRubric> {
   if (isMockMode()) {
-    throw new AiError("provider", "Reading rubric files needs the AI, which is off on this server. Paste the rubric as text.");
+    throw new AiError("provider", 'Reading rubrics with AI is off on this server (mock mode). Type the rubric as "Mark | Description" lines.');
   }
   const filePart =
     "text" in source
@@ -191,7 +191,7 @@ export async function extractRubric(source: RubricSource): Promise<ExtractedRubr
     try {
       return extractedRubricSchema.parse(extractJson(text));
     } catch {
-      if (attempt === 2) throw new AiError("invalid_output", "The AI could not read a rubric from this file.");
+      if (attempt === 2) throw new AiError("invalid_output", "The AI could not read a rubric from this.");
     }
   }
   throw new AiError("invalid_output", "Unreachable");
