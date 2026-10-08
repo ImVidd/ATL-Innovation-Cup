@@ -212,9 +212,9 @@ export default function SetupPanel({ onStart, initial, onCancel }: Props) {
   }
 
   const titles = [
-    { title: editing ? "Edit the question" : "What are you grading?", sub: "Paste the exam question. The AI reads it with the rubric." },
-    { title: "How is it marked?", sub: "Upload your rubric, or type one criterion per line with its marks." },
-    { title: "Add the answers", sub: "Answers are labeled S1, S2… Use fake or anonymized answers only, never names or IDs." },
+    { title: "Exam question", sub: "The question your students answered." },
+    { title: "Rubric", sub: "Upload it, or type one criterion per line as Mark | Description." },
+    { title: "Student answers", sub: "Paste or upload them. They become S1, S2… Fake or anonymized answers only." },
   ][step];
 
   const primaryLabel =

@@ -333,9 +333,10 @@ export default function GraderApp() {
       )}
 
       {session && view === "grade" && (
-        <div className="mx-auto mb-8 max-w-3xl">
-          <p className="text-lg leading-7 font-medium text-ink">{session.question || "(no question text)"}</p>
-          <p className="mt-1 text-xs text-ink-muted">
+        <div className="mx-auto mb-10 max-w-3xl">
+          <p className="text-xs font-semibold tracking-wide text-ink-muted uppercase">Exam question</p>
+          <h1 className="mt-2 text-[28px] leading-9 font-semibold tracking-[-0.02em] text-ink">{session.question || "(no question text)"}</h1>
+          <p className="mt-2 text-sm text-ink-muted">
             {scoredCount} of {session.answers.length} scored · {flaggedCount} flagged · {totalPoints} pts ·{" "}
             {saved ? "saved, bookmark this link to come back" : "not saved, refreshing clears your work"}
           </p>

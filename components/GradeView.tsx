@@ -98,11 +98,11 @@ export default function GradeView({ session, totalPoints, current, elapsedSecond
 
       <section key={answer.id} aria-label={`Answer ${answer.label}`} className={direction === "forward" ? "enter-forward" : "enter-back"}>
         <div className="mb-4 flex items-center justify-between gap-3">
-          <div className="flex items-baseline gap-3">
-            <h2 className="text-2xl font-semibold tracking-tight tabular-nums">{answer.label}</h2>
-            <span className="text-sm text-ink-muted">
-              {current + 1} of {count}
-            </span>
+          <div>
+            <p className="text-xs font-semibold tracking-wide text-ink-muted uppercase">Student answer</p>
+            <h2 className="mt-1 text-2xl font-semibold tracking-tight tabular-nums">
+              {answer.label} <span className="text-base font-normal text-ink-muted">· {current + 1} of {count}</span>
+            </h2>
           </div>
           <div className="flex items-center gap-1">
             <span className="mr-2 rounded-full bg-sunken px-3 py-1 text-sm tabular-nums text-ink-muted" title="Time on this answer">
