@@ -2,20 +2,22 @@
 
 /*
  * TA Grader design system. Tokens mirror the design system's tokens.json (see DESIGN.md).
- * Colours are CSS variables so the dark ("late night") theme follows the OS setting,
- * or can be forced with <html data-theme="dark|light">.
+ * Light (white) is the default. The dark ("late night") theme applies only when the grader
+ * picks it with the header toggle (<html data-theme="dark">).
  * Use the semantic utilities (bg-paper, text-ink, border-line, bg-primary…),
  * never raw Tailwind palette colours (slate-*, emerald-*…).
  */
 
 :root {
-  --paper: #faf8f4;
+  /* White first, like Apple's site: white page, light grey panels, near-black text.
+     Accents come from the brand deck: Desk Ink (primary) and Marker (yellow). */
+  --paper: #ffffff;
   --surface: #ffffff;
-  --surface-sunken: #f2efe8;
-  --line: #e3ded4;
-  --control: #848b92;
-  --ink: #1b2730;
-  --ink-muted: #56626b;
+  --surface-sunken: #f5f5f7;
+  --line: #e5e5ea;
+  --control: #d2d2d7;
+  --ink: #1d1d1f;
+  --ink-muted: #6e6e73;
   --primary: #1f4257;
   --primary-hover: #2b5670;
   --on-primary: #ffffff;
@@ -23,44 +25,16 @@
   --highlight: #fcefc2;
   --highlight-rule: #b3810f;
   --met: #2e6b4e;
-  --met-bg: #e3f1e8;
+  --met-bg: #e6f3eb;
   --partial: #835500;
   --partial-bg: #fbf0d9;
   --flag: #a84b1f;
-  --flag-bg: #fbede4;
+  --flag-bg: #fdf0e8;
   --danger: #a3242b;
   --danger-bg: #fbe9ea;
-  --focus: #2f6f9a;
-  --float-shadow: 0 8px 24px -6px rgb(27 39 48 / 0.18);
+  --focus: #1f4257;
+  --float-shadow: 0 12px 32px -8px rgb(0 0 0 / 0.16);
   color-scheme: light;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    --paper: #121719;
-    --surface: #1a2125;
-    --surface-sunken: #0d1113;
-    --line: #2b353a;
-    --control: #6b787f;
-    --ink: #e9e6e0;
-    --ink-muted: #a5aeb3;
-    --primary: #9cc3d6;
-    --primary-hover: #b6d5e4;
-    --on-primary: #0f1e27;
-    --highlight: #3a3320;
-    --highlight-rule: #d9b44a;
-    --met: #8bcba8;
-    --met-bg: #1b3328;
-    --partial: #e2b866;
-    --partial-bg: #382d14;
-    --flag: #f0a57a;
-    --flag-bg: #3a2219;
-    --danger: #f2a0a2;
-    --danger-bg: #3b1d20;
-    --focus: #8cc4e8;
-    --float-shadow: 0 8px 24px -6px rgb(0 0 0 / 0.5);
-    color-scheme: dark;
-  }
 }
 
 :root[data-theme="dark"] {
@@ -90,9 +64,11 @@
 }
 
 @theme inline {
-  --font-sans: var(--font-public-sans), ui-sans-serif, system-ui, sans-serif;
-  --font-serif: var(--font-newsreader), Georgia, "Times New Roman", serif;
-  --font-mono: var(--font-plex-mono), ui-monospace, Menlo, monospace;
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  /* Headings use Inter too; "serif" is kept as a name so existing classes still work. */
+  --font-serif: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  /* Only for code answers and rubric text. */
+  --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
 
   --color-paper: var(--paper);
   --color-surface: var(--surface);
@@ -117,9 +93,9 @@
   --color-danger-bg: var(--danger-bg);
   --color-focus: var(--focus);
 
-  --radius-sm: 4px;
-  --radius-md: 8px;
-  --radius-lg: 12px;
+  --radius-sm: 6px;
+  --radius-md: 12px;
+  --radius-lg: 18px;
 
   --shadow-float: var(--float-shadow);
 }
@@ -128,19 +104,13 @@ body {
   background: var(--paper);
   color: var(--ink);
   font-family: var(--font-sans);
+  font-feature-settings: "cv11", "ss01";
+  letter-spacing: -0.006em;
 }
 
 /* Header logo: show the mark that matches the active theme (same selectors as the tokens above). */
 .logo-dark {
   display: none;
-}
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) .logo-light {
-    display: none;
-  }
-  :root:not([data-theme="light"]) .logo-dark {
-    display: block;
-  }
 }
 :root[data-theme="dark"] .logo-light {
   display: none;
@@ -164,32 +134,32 @@ body {
     @apply mb-2 block text-xs text-ink-muted;
   }
   .input {
-    @apply block w-full rounded-md border border-control bg-surface px-3 py-2 text-ink placeholder:text-ink-muted focus:outline-2 focus:outline-offset-2 focus:outline-focus;
+    @apply block w-full rounded-xl border border-control bg-surface px-4 py-3 text-ink transition-shadow placeholder:text-ink-muted focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/15;
   }
   .btn-primary {
-    @apply inline-flex min-h-10 items-center justify-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-semibold text-on-primary transition-colors hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-50;
+    @apply inline-flex min-h-10 items-center justify-center gap-2 rounded-full bg-primary px-5 py-2 text-sm font-medium text-on-primary transition-all hover:bg-primary-hover active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40;
   }
   .btn-secondary {
-    @apply inline-flex min-h-10 items-center justify-center gap-2 rounded-md border border-control bg-surface px-4 py-2 text-sm font-semibold text-ink transition-colors hover:bg-sunken disabled:cursor-not-allowed disabled:opacity-50;
+    @apply inline-flex min-h-10 items-center justify-center gap-2 rounded-full bg-sunken px-5 py-2 text-sm font-medium text-ink transition-all hover:bg-line active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40;
   }
   .card {
-    @apply rounded-lg border border-line bg-surface;
+    @apply rounded-[18px] bg-sunken;
   }
   /* The student's own words quoted as evidence. Use for nothing else. */
   .evidence {
-    @apply rounded-r-sm border-l-[3px] border-highlight-rule bg-highlight px-3 py-1 font-serif italic text-ink;
+    @apply rounded-lg bg-highlight px-3 py-1.5 text-[15px] leading-6 text-ink;
   }
   .callout {
-    @apply flex gap-2 rounded-md border px-4 py-3 text-sm text-ink;
+    @apply flex gap-2 rounded-xl px-4 py-3 text-sm text-ink;
   }
   .callout-flag {
-    @apply border-flag bg-flag-bg;
+    @apply bg-flag-bg;
   }
   .callout-info {
-    @apply border-line bg-sunken;
+    @apply bg-sunken text-ink-muted;
   }
   .callout-danger {
-    @apply border-danger bg-danger-bg;
+    @apply bg-danger-bg;
   }
 
   /* Larger pill buttons for the one main action of a screen, and quiet text buttons. */
@@ -197,21 +167,21 @@ body {
     @apply min-h-12 rounded-full px-7 text-base;
   }
   .btn-ghost {
-    @apply inline-flex min-h-10 items-center justify-center gap-1.5 rounded-full px-4 text-sm font-semibold text-ink-muted transition-colors hover:bg-sunken hover:text-ink disabled:cursor-not-allowed disabled:opacity-50;
+    @apply inline-flex min-h-10 items-center justify-center gap-1.5 rounded-full px-4 text-sm font-medium text-primary transition-colors hover:bg-sunken disabled:cursor-not-allowed disabled:opacity-40;
   }
   /* Segmented control (two to four options side by side). */
   .seg {
     @apply inline-flex rounded-full bg-sunken p-1;
   }
   .seg-option {
-    @apply min-h-8 rounded-full px-4 text-sm font-semibold text-ink-muted transition-all hover:text-ink;
+    @apply min-h-8 rounded-full px-4 text-sm font-medium text-ink-muted transition-all hover:text-ink;
   }
   .seg-option[aria-pressed="true"] {
     @apply bg-surface text-ink shadow-sm;
   }
   /* A file drop area. */
   .dropzone {
-    @apply flex w-full flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed border-control bg-surface px-6 py-10 text-center transition-colors hover:border-primary hover:bg-sunken;
+    @apply flex w-full flex-col items-center justify-center gap-2 rounded-[18px] border-2 border-dashed border-control bg-surface px-6 py-12 text-center transition-colors hover:border-primary hover:bg-sunken;
   }
   .dropzone[data-over="true"] {
     @apply border-primary bg-sunken;

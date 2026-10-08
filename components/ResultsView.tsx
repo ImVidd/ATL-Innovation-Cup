@@ -34,7 +34,7 @@ export default function ResultsView({ session, totalPoints, onBack }: Props) {
             </svg>
           </div>
         )}
-        <h2 className="font-serif text-[40px] leading-[46px] font-semibold tracking-tight">
+        <h2 className="text-[40px] leading-[44px] font-semibold tracking-[-0.03em]">
           {allDone ? "The whole set is graded." : `${scored.length} of ${session.answers.length} scored`}
         </h2>
         <p className="mt-2 text-base text-ink-muted">
@@ -53,12 +53,12 @@ export default function ResultsView({ session, totalPoints, onBack }: Props) {
         {session.answers.map((a, i) => (
           <li key={a.id}>
             <button type="button" onClick={() => onBack(i)} className="flex w-full items-center gap-4 px-5 py-3.5 text-left transition-colors hover:bg-sunken">
-              <span className="w-10 shrink-0 font-mono text-sm">{a.label}</span>
+              <span className="w-10 shrink-0 text-sm font-medium tabular-nums">{a.label}</span>
               <span className="min-w-0 flex-1 truncate text-sm text-ink-muted">
                 {a.analysis?.flag ? <span className="text-flag">⚠ {a.analysis.flagReason}</span> : a.analysisError ? "AI failed" : a.graderNote}
               </span>
-              <span className="shrink-0 font-mono text-xs text-ink-muted tabular-nums">{formatSeconds(a.secondsSpent)}</span>
-              <span className={`w-16 shrink-0 text-right font-mono text-sm tabular-nums ${a.finalScore === null || a.finalScore === undefined ? "text-ink-muted" : "text-ink"}`}>
+              <span className="shrink-0 text-xs text-ink-muted tabular-nums">{formatSeconds(a.secondsSpent)}</span>
+              <span className={`w-16 shrink-0 text-right text-sm font-medium tabular-nums ${a.finalScore === null || a.finalScore === undefined ? "text-ink-muted" : "text-ink"}`}>
                 {a.finalScore ?? "–"}
                 <span className="text-ink-muted">/{totalPoints}</span>
               </span>
@@ -84,8 +84,8 @@ export default function ResultsView({ session, totalPoints, onBack }: Props) {
 
 function Stat({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-lg bg-sunken px-4 py-4 text-center">
-      <div className="font-mono text-[26px] leading-8 font-medium tabular-nums">{value}</div>
+    <div className="rounded-[18px] bg-sunken px-4 py-5 text-center">
+      <div className="text-[28px] leading-8 font-semibold tracking-tight tabular-nums">{value}</div>
       <div className="mt-1 text-xs text-ink-muted">{label}</div>
     </div>
   );

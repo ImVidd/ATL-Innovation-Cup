@@ -5,7 +5,7 @@ import { MAX_ANSWERS, MAX_ANSWER_CHARS } from "@/lib/limits";
 import { parseRubric } from "@/lib/parseRubric";
 import { ANSWERS_ACCEPT, RUBRIC_ACCEPT, readAnswersFile, readRubricFile, structureRubricText } from "@/lib/readFiles";
 import { SAMPLE_ANSWERS, SAMPLE_QUESTION, SAMPLE_RUBRIC } from "@/lib/sampleData";
-import { splitAnswers } from "@/lib/splitAnswers";
+import { splitAnswers, suggestSplit } from "@/lib/splitAnswers";
 import type { Criterion } from "@/lib/types";
 
 export type SetupInput = {
@@ -118,14 +118,16 @@ export default function SetupPanel({ onStart, initial, onCancel }: Props) {
 
   const rubric = parseRubric(rubricText);
   const answers = splitAnswers(answersText);
+  // Answers pasted without "---" between them (blank lines or "Student 1:" labels instead).
+  const split = answers.length <= 1 ? suggestSplit(answersText) : null;
   const tooLong = answers.map((a, i) => ({ label: `S${i + 1}`, len: a.length })).filter((a) => a.len > MAX_ANSWER_CHARS);
 
   const rubricProblems: string[] = [];
   if (rubric.criteria.length === 0 && rubric.errors.length === 0) {
     rubricProblems.push(
       rubric.skipped.length > 0
-        ? 'No marks found. Add a mark to each line, like "2 | Defines the term", or use Structure with AI.'
-        : "Add at least one criterion with its marks.",
+        ? "No marks found. Use 'Mark | Description' on each line, or let the AI structure it for you."
+        : "Add at least one criterion. Use 'Mark | Description' on each line.",
     );
   }
   if (rubric.errors.length > 0) rubricProblems.push("Fix the lines marked below.");
@@ -246,7 +248,7 @@ export default function SetupPanel({ onStart, initial, onCancel }: Props) {
       </nav>
 
       <div key={step} className={direction === "forward" ? "enter-forward" : "enter-back"}>
-        <h2 className="font-serif text-[40px] leading-[46px] font-semibold tracking-tight">{titles.title}</h2>
+        <h2 className="text-[40px] leading-[44px] font-semibold tracking-[-0.03em]">{titles.title}</h2>
         <p className="mt-2 text-base text-ink-muted">{titles.sub}</p>
 
         <div className="mt-8 space-y-4">
@@ -258,7 +260,7 @@ export default function SetupPanel({ onStart, initial, onCancel }: Props) {
                 rows={4}
                 autoFocus
                 aria-label="Exam question"
-                className="input rounded-lg px-5 py-4 font-serif text-xl leading-8"
+                className="input px-5 py-4 text-xl leading-8"
                 placeholder="Explain operant conditioning and give one example."
               />
               {!editing && (
@@ -298,11 +300,11 @@ export default function SetupPanel({ onStart, initial, onCancel }: Props) {
                     onChange={(e) => setRubricText(e.target.value)}
                     rows={5}
                     aria-label="Rubric"
-                    className="input rounded-lg px-4 py-3 font-mono text-sm leading-[22px]"
+                    className="input font-mono text-sm leading-[22px]"
                     placeholder={"2 | Defines operant conditioning\n2 | Gives a correct example\n1 | Mentions reinforcement or punishment"}
                   />
                   <div className="flex flex-wrap items-center justify-between gap-2">
-                    <p className="text-xs text-ink-muted">Also works: &quot;Gives an example (2 marks)&quot;, or a table pasted from Word or Excel.</p>
+                    <p className="text-xs text-ink-muted">Use &quot;Mark | Description&quot;. &quot;(2 marks)&quot;, headings and tables from Word or Excel work too.</p>
                     <button type="button" className="btn-ghost" onClick={structureRubric} disabled={!rubricText.trim() || busy}>
                       Structure with AI
                     </button>
@@ -322,13 +324,13 @@ export default function SetupPanel({ onStart, initial, onCancel }: Props) {
                     {rubric.criteria.map((c) => (
                       <li key={c.id} className="flex items-baseline justify-between gap-4 px-5 py-3">
                         <span className="text-[15px] leading-6">{c.description}</span>
-                        <span className="shrink-0 font-mono text-sm text-ink-muted">{c.points} pt{c.points === 1 ? "" : "s"}</span>
+                        <span className="shrink-0 text-sm text-ink-muted tabular-nums">{c.points} pt{c.points === 1 ? "" : "s"}</span>
                       </li>
                     ))}
                   </ul>
                   <div className="flex items-baseline justify-between border-t border-line bg-sunken px-5 py-3">
                     <span className="text-sm font-semibold">Total</span>
-                    <span className="font-mono text-sm font-medium">{rubric.totalPoints} pts</span>
+                    <span className="text-sm font-semibold tabular-nums">{rubric.totalPoints} pts</span>
                   </div>
                 </div>
               )}
@@ -344,7 +346,7 @@ export default function SetupPanel({ onStart, initial, onCancel }: Props) {
                       </li>
                     ))}
                   </ul>
-                  <p className="mt-2">To count one, add its mark, like &quot;2 | Description&quot;.</p>
+                  <p className="mt-2">To count one, use &quot;Mark | Description&quot;.</p>
                 </details>
               )}
               {rubric.errors.map((err) => (
@@ -380,20 +382,32 @@ export default function SetupPanel({ onStart, initial, onCancel }: Props) {
                   onChange={(e) => setAnswersText(e.target.value)}
                   rows={9}
                   aria-label="Student answers"
-                  className="input rounded-lg px-4 py-3 font-serif text-base leading-7"
+                  className="input text-base leading-7"
                   placeholder={"First answer…\n---\nSecond answer…\n---\nThird answer…"}
                 />
               )}
               <StatusLine status={answersStatus} />
-              {answersMode === "paste" && <p className="text-xs text-ink-muted">Put a line with only --- between answers.</p>}
+              {answersMode === "paste" && !split && (
+                <p className="text-xs text-ink-muted">Put a line with only --- between answers, or a blank line and we&apos;ll offer to split them.</p>
+              )}
+              {answersMode === "paste" && split && (
+                <div className="fade-up flex flex-wrap items-center justify-between gap-3 rounded-[18px] bg-highlight px-5 py-4" role="status">
+                  <p className="text-[15px]">
+                    <span className="font-semibold">This looks like {split.length} answers.</span> Split them into S1–S{split.length}?
+                  </p>
+                  <button type="button" className="btn-primary" onClick={() => setAnswersText(split.join("\n---\n"))}>
+                    Split into {split.length}
+                  </button>
+                </div>
+              )}
 
               {answers.length > 0 && (
                 <div className="fade-up card overflow-hidden">
                   <ul className="divide-y divide-line">
                     {answers.slice(0, 5).map((a, i) => (
                       <li key={i} className="flex items-baseline gap-4 px-5 py-3">
-                        <span className="w-8 shrink-0 font-mono text-sm text-ink-muted">S{i + 1}</span>
-                        <span className="truncate font-serif text-[15px]">{a.replace(/\s+/g, " ")}</span>
+                        <span className="w-8 shrink-0 text-sm font-medium text-ink-muted tabular-nums">S{i + 1}</span>
+                        <span className="truncate text-[15px]">{a.replace(/\s+/g, " ")}</span>
                       </li>
                     ))}
                   </ul>

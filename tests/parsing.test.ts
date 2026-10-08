@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { parseRubric } from "@/lib/parseRubric";
 import { SAMPLE_ANSWERS, SAMPLE_RUBRIC } from "@/lib/sampleData";
-import { splitAnswers } from "@/lib/splitAnswers";
+import { splitAnswers, suggestSplit } from "@/lib/splitAnswers";
 
 describe("parseRubric", () => {
   it("parses the sample rubric", () => {
@@ -94,5 +94,28 @@ describe("splitAnswers", () => {
 
   it("keeps multi-line answers together and does not split on inline dashes", () => {
     expect(splitAnswers("line a\nline b -- still a\n---\nb")).toEqual(["line a\nline b -- still a", "b"]);
+  });
+});
+
+describe("suggestSplit", () => {
+  it("splits labeled answers and drops the labels", () => {
+    expect(suggestSplit("Student 1: First answer\nmore of it\nStudent 2: Second answer\nAnswer 3. Third")).toEqual([
+      "First answer\nmore of it",
+      "Second answer",
+      "Third",
+    ]);
+  });
+
+  it("splits at blank lines", () => {
+    expect(suggestSplit("First answer.\n\nSecond answer.\n\n\nThird.")).toEqual(["First answer.", "Second answer.", "Third."]);
+  });
+
+  it("does nothing when --- separators are already used, or there is one block", () => {
+    expect(suggestSplit("one\n---\ntwo")).toBeNull();
+    expect(suggestSplit("just one answer\non two lines")).toBeNull();
+  });
+
+  it("does not treat sentences starting with 'Answer' or 's' as labels", () => {
+    expect(suggestSplit("Answer the question fully.\nso this is one answer")).toBeNull();
   });
 });

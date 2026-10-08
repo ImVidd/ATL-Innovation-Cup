@@ -279,7 +279,7 @@ export default function GraderApp() {
             <img src="/logo-mark.svg" alt="" width={32} height={32} className="logo-light h-8 w-8" />
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/logo-mark-dark.svg" alt="" width={32} height={32} className="logo-dark h-8 w-8" />
-            <span className="font-serif text-xl font-semibold tracking-tight">TA Grader</span>
+            <span className="text-lg font-semibold tracking-tight">TA Grader</span>
           </div>
           <div className="flex items-center gap-2">
             {session && (
@@ -334,7 +334,7 @@ export default function GraderApp() {
 
       {session && view === "grade" && (
         <div className="mx-auto mb-8 max-w-3xl">
-          <p className="font-serif text-lg leading-7 text-ink">{session.question || "(no question text)"}</p>
+          <p className="text-lg leading-7 font-medium text-ink">{session.question || "(no question text)"}</p>
           <p className="mt-1 text-xs text-ink-muted">
             {scoredCount} of {session.answers.length} scored · {flaggedCount} flagged · {totalPoints} pts ·{" "}
             {saved ? "saved, bookmark this link to come back" : "not saved, refreshing clears your work"}

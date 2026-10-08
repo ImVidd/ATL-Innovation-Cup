@@ -67,7 +67,7 @@ export default function AnalysisPanel({ answer, criteria, showBaseline, onRetry 
   return (
     <div className="fade-up space-y-4">
       {a.flag && (
-        <div className="callout callout-flag rounded-lg" role="status">
+        <div className="callout callout-flag" role="status">
           <span className="text-flag" aria-hidden>
             ⚠
           </span>
@@ -78,7 +78,7 @@ export default function AnalysisPanel({ answer, criteria, showBaseline, onRetry 
       )}
 
       <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <h3 className="font-serif text-2xl font-semibold">AI highlights</h3>
+        <h3 className="text-2xl font-semibold tracking-tight">AI highlights</h3>
         <span className="text-xs text-ink-muted">
           {CONFIDENCE_TEXT[a.confidence]} · suggestions only
         </span>
@@ -92,7 +92,7 @@ export default function AnalysisPanel({ answer, criteria, showBaseline, onRetry 
             <li key={c.id} className="space-y-2 px-5 py-4">
               <div className="flex items-start justify-between gap-4">
                 <span className="text-[15px] leading-6 font-medium">
-                  {c.description} <span className="font-mono text-xs font-normal text-ink-muted">{c.points} pt{c.points === 1 ? "" : "s"}</span>
+                  {c.description} <span className="text-xs font-normal text-ink-muted tabular-nums">{c.points} pt{c.points === 1 ? "" : "s"}</span>
                 </span>
                 <span className="flex shrink-0 items-center gap-2">
                   {b && (

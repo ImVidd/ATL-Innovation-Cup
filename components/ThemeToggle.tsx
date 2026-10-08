@@ -7,24 +7,15 @@ type Theme = "light" | "dark";
 // Must match the inline script in app/layout.tsx, which applies the saved choice before first paint.
 export const THEME_STORAGE_KEY = "ta-grader-theme";
 
-const systemDark = () => window.matchMedia("(prefers-color-scheme: dark)");
-
-// The theme in effect: the grader's saved choice (data-theme on <html>), otherwise the OS setting.
+// The theme in effect: the grader's saved choice (data-theme on <html>), otherwise light.
 function currentTheme(): Theme {
-  const forced = document.documentElement.dataset.theme;
-  if (forced === "light" || forced === "dark") return forced;
-  return systemDark().matches ? "dark" : "light";
+  return document.documentElement.dataset.theme === "dark" ? "dark" : "light";
 }
 
 function subscribe(onChange: () => void) {
   const observer = new MutationObserver(onChange);
   observer.observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
-  const media = systemDark();
-  media.addEventListener("change", onChange);
-  return () => {
-    observer.disconnect();
-    media.removeEventListener("change", onChange);
-  };
+  return () => observer.disconnect();
 }
 
 export default function ThemeToggle() {

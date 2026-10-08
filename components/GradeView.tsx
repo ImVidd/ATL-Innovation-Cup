@@ -69,7 +69,7 @@ export default function GradeView({ session, totalPoints, current, elapsedSecond
                 onClick={() => select(index)}
                 aria-current={active}
                 title={a.analysis?.flag ? `${a.label}: needs a closer look` : isScored(a) ? `${a.label}: scored ${a.finalScore}` : a.label}
-                className={`relative flex h-9 min-w-12 items-center justify-center gap-1.5 rounded-full px-3 font-mono text-sm transition-all ${
+                className={`relative flex h-9 min-w-12 items-center justify-center gap-1.5 rounded-full px-3 text-sm font-medium tabular-nums transition-all ${
                   active ? "bg-primary text-on-primary" : isScored(a) ? "bg-met-bg text-met hover:brightness-95" : "bg-sunken text-ink hover:bg-line"
                 }`}
               >
@@ -99,13 +99,13 @@ export default function GradeView({ session, totalPoints, current, elapsedSecond
       <section key={answer.id} aria-label={`Answer ${answer.label}`} className={direction === "forward" ? "enter-forward" : "enter-back"}>
         <div className="mb-4 flex items-center justify-between gap-3">
           <div className="flex items-baseline gap-3">
-            <h2 className="font-mono text-2xl font-medium">{answer.label}</h2>
+            <h2 className="text-2xl font-semibold tracking-tight tabular-nums">{answer.label}</h2>
             <span className="text-sm text-ink-muted">
               {current + 1} of {count}
             </span>
           </div>
           <div className="flex items-center gap-1">
-            <span className="mr-2 rounded-full bg-sunken px-3 py-1 font-mono text-sm tabular-nums text-ink-muted" title="Time on this answer">
+            <span className="mr-2 rounded-full bg-sunken px-3 py-1 text-sm tabular-nums text-ink-muted" title="Time on this answer">
               ⏱ {formatSeconds(elapsedSeconds)}
             </span>
             <button type="button" className="btn-ghost h-10 w-10 !px-0" onClick={() => select(current - 1)} disabled={current === 0} aria-label="Previous answer">
@@ -118,7 +118,7 @@ export default function GradeView({ session, totalPoints, current, elapsedSecond
         </div>
 
         <div
-          className={`card whitespace-pre-wrap px-7 py-6 ${looksLikeCode(answer.text) ? "font-mono text-sm leading-6" : "font-serif text-xl leading-8"}`}
+          className={`card whitespace-pre-wrap px-7 py-6 ${looksLikeCode(answer.text) ? "font-mono text-sm leading-6" : "text-[19px] leading-8"}`}
         >
           {answer.text}
         </div>
@@ -184,13 +184,13 @@ function ScoreBar({ answer, totalPoints, onSave }: { answer: Answer; totalPoints
             aria-label={`Your score, 0 to ${totalPoints}`}
             placeholder="–"
             autoFocus
-            className="h-9 w-14 rounded-full bg-surface text-center font-mono text-lg tabular-nums text-ink outline-none placeholder:text-ink-muted"
+            className="h-9 w-14 rounded-full bg-surface text-center text-lg font-semibold tabular-nums text-ink outline-none placeholder:text-ink-muted"
           />
           <button type="button" className="h-9 w-9 rounded-full text-lg text-ink-muted transition-colors hover:bg-surface hover:text-ink" onClick={() => step(0.5)} aria-label="Raise score by half a point">
             +
           </button>
         </div>
-        <span className="font-mono text-sm text-ink-muted">/ {totalPoints}</span>
+        <span className="text-sm text-ink-muted tabular-nums">/ {totalPoints}</span>
         <input
           value={note}
           onChange={(e) => setNote(e.target.value)}
