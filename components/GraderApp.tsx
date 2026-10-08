@@ -25,6 +25,8 @@ export default function GraderApp() {
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   // Seconds the on-screen answer has been open in this visit (updated every second).
   const [live, setLive] = useState<{ answerId: string; secs: number } | null>(null);
+  // Changing this remounts the setup steps, sending the grader back to step 1.
+  const [setupKey, setSetupKey] = useState(0);
 
   // Refs so async work always sees the latest values.
   const sessionRef = useRef<Session | null>(null);
@@ -248,6 +250,16 @@ export default function GraderApp() {
     else setCurrent(next);
   }
 
+  // The logo: back to the first setup step. With a session open, that means starting a new question.
+  function goHome() {
+    if (sessionRef.current) {
+      newSession();
+      return;
+    }
+    setSetupKey((k) => k + 1);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
   function newSession() {
     if (!window.confirm("Start a new question? Your current scores stay saved only if this session was saved.")) return;
     setSession(null);
@@ -273,14 +285,19 @@ export default function GraderApp() {
     <div className="flex w-full flex-1 flex-col">
       <header className="sticky top-0 z-30 border-b border-line bg-paper/85 backdrop-blur">
         <div className="mx-auto flex h-16 w-full max-w-5xl items-center justify-between gap-3 px-4">
-          <div className="flex items-center gap-2.5">
+          <button
+            type="button"
+            onClick={goHome}
+            className="flex items-center gap-2.5 rounded-full pr-2 transition-opacity hover:opacity-75"
+            aria-label="TA Grader: back to the start"
+          >
             {/* Both marks are rendered; globals.css shows the one for the active theme. Plain <img>: SVGs gain nothing from next/image. */}
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/logo-mark.svg" alt="" width={32} height={32} className="logo-light h-8 w-8" />
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/logo-mark-dark.svg" alt="" width={32} height={32} className="logo-dark h-8 w-8" />
             <span className="text-lg font-semibold tracking-tight">TA Grader</span>
-          </div>
+          </button>
           <div className="flex items-center gap-2">
             {session && (
               <>
@@ -344,7 +361,7 @@ export default function GraderApp() {
       )}
 
       {!session ? (
-        <SetupPanel onStart={startSession} />
+        <SetupPanel key={setupKey} onStart={startSession} />
       ) : view === "setup" ? (
         <SetupPanel
           key={session.id}
