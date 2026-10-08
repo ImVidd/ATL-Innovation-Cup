@@ -134,7 +134,7 @@ body {
     @apply mb-2 block text-xs text-ink-muted;
   }
   .input {
-    @apply block w-full rounded-xl border border-control bg-surface px-4 py-3 text-ink transition-shadow placeholder:text-ink-muted focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/15;
+    @apply block w-full rounded-xl border border-control bg-surface px-4 py-3 text-ink transition-shadow placeholder:text-ink-muted/45 focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/15;
   }
   .btn-primary {
     @apply inline-flex min-h-10 items-center justify-center gap-2 rounded-full bg-primary px-5 py-2 text-sm font-medium text-on-primary transition-all hover:bg-primary-hover active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40;

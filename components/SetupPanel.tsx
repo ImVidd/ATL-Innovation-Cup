@@ -127,7 +127,9 @@ export default function SetupPanel({ onStart, initial, onCancel }: Props) {
     rubricProblems.push(
       rubric.skipped.length > 0
         ? "No marks found. Use 'Mark | Description' on each line, or let the AI structure it for you."
-        : "Add at least one criterion. Use 'Mark | Description' on each line.",
+        : rubricText.trim() === ""
+          ? "The rubric is empty. Type your criteria in the box (the grey text is only an example), or upload a file."
+          : "Add at least one criterion. Use 'Mark | Description' on each line.",
     );
   }
   if (rubric.errors.length > 0) rubricProblems.push("Fix the lines marked below.");
@@ -261,7 +263,7 @@ export default function SetupPanel({ onStart, initial, onCancel }: Props) {
                 autoFocus
                 aria-label="Exam question"
                 className="input px-5 py-4 text-xl leading-8"
-                placeholder="Explain operant conditioning and give one example."
+                placeholder="e.g. Explain operant conditioning and give one example."
               />
               {!editing && (
                 <p className="text-sm text-ink-muted">
@@ -301,7 +303,7 @@ export default function SetupPanel({ onStart, initial, onCancel }: Props) {
                     rows={5}
                     aria-label="Rubric"
                     className="input font-mono text-sm leading-[22px]"
-                    placeholder={"2 | Defines operant conditioning\n2 | Gives a correct example\n1 | Mentions reinforcement or punishment"}
+                    placeholder={"Example (type your own):\n2 | Defines operant conditioning\n2 | Gives a correct example"}
                   />
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <p className="text-xs text-ink-muted">Use &quot;Mark | Description&quot;. &quot;(2 marks)&quot;, headings and tables from Word or Excel work too.</p>
@@ -383,7 +385,7 @@ export default function SetupPanel({ onStart, initial, onCancel }: Props) {
                   rows={9}
                   aria-label="Student answers"
                   className="input text-base leading-7"
-                  placeholder={"First answer…\n---\nSecond answer…\n---\nThird answer…"}
+                  placeholder={"Paste the answers here.\nPut a blank line or --- between answers."}
                 />
               )}
               <StatusLine status={answersStatus} />
