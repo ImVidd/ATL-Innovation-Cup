@@ -15,7 +15,7 @@ export type SetupInput = {
   answerTexts: string[];
 };
 
-// When editing a session in progress, the boxes start filled in with its current content.
+// When editing a session in progress, the steps start filled in with its current content.
 export type SetupInitial = { question: string; rubricText: string; answersText: string };
 
 type Props = {
@@ -26,25 +26,51 @@ type Props = {
 
 type FileStatus = { kind: "loading" | "ok" | "error"; message: string } | null;
 
+const STEPS = ["Question", "Rubric", "Answers"] as const;
+
 function StatusLine({ status }: { status: FileStatus }) {
   if (!status) return null;
   const cls = status.kind === "error" ? "text-danger" : status.kind === "ok" ? "text-met" : "text-ink-muted";
   return (
-    <span className={`mt-1 block text-sm ${cls}`} role={status.kind === "error" ? "alert" : "status"}>
-      {status.kind === "loading" && "⏳ "}
+    <p className={`fade-up text-sm ${cls}`} role={status.kind === "error" ? "alert" : "status"}>
+      {status.kind === "loading" && (
+        <span className="mr-2 inline-block h-3.5 w-3.5 animate-spin rounded-full border-2 border-line border-t-primary align-[-2px]" aria-hidden />
+      )}
       {status.kind === "ok" && "✓ "}
       {status.message}
-    </span>
+    </p>
   );
 }
 
-// A button that opens a file picker (the real input is hidden).
-function UploadButton({ label, accept, onFile, disabled }: { label: string; accept: string; onFile: (f: File) => void; disabled?: boolean }) {
+// Click or drop a file. The real <input type="file"> is hidden.
+function DropZone({ title, hint, accept, onFile, disabled }: { title: string; hint: string; accept: string; onFile: (f: File) => void; disabled?: boolean }) {
   const input = useRef<HTMLInputElement>(null);
+  const [over, setOver] = useState(false);
   return (
     <>
-      <button type="button" className="btn-secondary !px-3 !py-1 text-xs" onClick={() => input.current?.click()} disabled={disabled}>
-        ⬆ {label}
+      <button
+        type="button"
+        className="dropzone"
+        data-over={over}
+        disabled={disabled}
+        onClick={() => input.current?.click()}
+        onDragOver={(e) => {
+          e.preventDefault();
+          setOver(true);
+        }}
+        onDragLeave={() => setOver(false)}
+        onDrop={(e) => {
+          e.preventDefault();
+          setOver(false);
+          const f = e.dataTransfer.files?.[0];
+          if (f) onFile(f);
+        }}
+      >
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="text-primary" aria-hidden>
+          <path d="M12 16V4m0 0-4.5 4.5M12 4l4.5 4.5M4 15v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+        <span className="text-base font-semibold text-ink">{title}</span>
+        <span className="text-sm text-ink-muted">{hint}</span>
       </button>
       <input
         ref={input}
@@ -61,46 +87,85 @@ function UploadButton({ label, accept, onFile, disabled }: { label: string; acce
   );
 }
 
+function Segmented<T extends string>({ value, options, onChange, label }: { value: T; options: { value: T; label: string }[]; onChange: (v: T) => void; label: string }) {
+  return (
+    <div className="seg" role="group" aria-label={label}>
+      {options.map((o) => (
+        <button key={o.value} type="button" className="seg-option" aria-pressed={value === o.value} onClick={() => onChange(o.value)}>
+          {o.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 export default function SetupPanel({ onStart, initial, onCancel }: Props) {
   const editing = Boolean(initial);
+  const [step, setStep] = useState(0);
+  // Furthest step reached, so the step bar can jump back and forth between filled-in steps.
+  const [reached, setReached] = useState(editing ? STEPS.length - 1 : 0);
+  const [direction, setDirection] = useState<"forward" | "back">("forward");
   const [question, setQuestion] = useState(initial?.question ?? "");
   const [rubricText, setRubricText] = useState(initial?.rubricText ?? "");
   const [answersText, setAnswersText] = useState(initial?.answersText ?? "");
+  const [rubricMode, setRubricMode] = useState<"upload" | "type">(initial?.rubricText ? "type" : "upload");
+  const [answersMode, setAnswersMode] = useState<"paste" | "upload">("paste");
   // The grader's own rubric text from before "Structure with AI" replaced it, for Undo.
   const [rubricBeforeAi, setRubricBeforeAi] = useState<string | null>(null);
-  const [submitted, setSubmitted] = useState(false);
   const [rubricStatus, setRubricStatus] = useState<FileStatus>(null);
   const [answersStatus, setAnswersStatus] = useState<FileStatus>(null);
+  const [triedNext, setTriedNext] = useState(false);
 
   const rubric = parseRubric(rubricText);
   const answers = splitAnswers(answersText);
-  const tooLong = answers
-    .map((a, i) => ({ label: `S${i + 1}`, len: a.length }))
-    .filter((a) => a.len > MAX_ANSWER_CHARS);
+  const tooLong = answers.map((a, i) => ({ label: `S${i + 1}`, len: a.length })).filter((a) => a.len > MAX_ANSWER_CHARS);
 
-  const problems: string[] = [];
+  const rubricProblems: string[] = [];
   if (rubric.criteria.length === 0 && rubric.errors.length === 0) {
-    problems.push(
+    rubricProblems.push(
       rubric.skipped.length > 0
-        ? 'No marks found in the rubric. Add a mark to each line, for example "2 | Defines operant conditioning", or click "Structure with AI".'
-        : 'Add at least one rubric line, for example "2 | Defines operant conditioning".',
+        ? 'No marks found. Add a mark to each line, like "2 | Defines the term", or use Structure with AI.'
+        : "Add at least one criterion with its marks.",
     );
   }
-  if (rubric.errors.length > 0) problems.push("Fix the rubric lines marked above.");
-  if (answers.length === 0) problems.push("Add at least one student answer.");
-  if (answers.length > MAX_ANSWERS) problems.push(`Too many answers: max ${MAX_ANSWERS} per session.`);
-  if (tooLong.length > 0) {
-    problems.push(`${tooLong.map((a) => a.label).join(", ")} over ${MAX_ANSWER_CHARS} characters. Shorten or split them.`);
+  if (rubric.errors.length > 0) rubricProblems.push("Fix the lines marked below.");
+
+  const answerProblems: string[] = [];
+  if (answers.length === 0) answerProblems.push("Add at least one answer.");
+  if (answers.length > MAX_ANSWERS) answerProblems.push(`Too many answers: ${MAX_ANSWERS} at most per question.`);
+  if (tooLong.length > 0) answerProblems.push(`${tooLong.map((a) => a.label).join(", ")} over ${MAX_ANSWER_CHARS} characters. Shorten or split them.`);
+
+  const stepProblems = step === 1 ? rubricProblems : step === 2 ? answerProblems : [];
+  const busy = rubricStatus?.kind === "loading" || answersStatus?.kind === "loading";
+
+  function go(to: number) {
+    setDirection(to > step ? "forward" : "back");
+    setStep(to);
+    setReached((r) => Math.max(r, to));
+    setTriedNext(false);
   }
 
-  function insertSample() {
+  function next() {
+    setTriedNext(true);
+    if (stepProblems.length > 0) return;
+    if (step < STEPS.length - 1) {
+      go(step + 1);
+      return;
+    }
+    onStart({ question: question.trim(), rubricText, criteria: rubric.criteria, answerTexts: answers });
+  }
+
+  function useSample() {
     setQuestion(SAMPLE_QUESTION);
     setRubricText(SAMPLE_RUBRIC);
     setAnswersText(SAMPLE_ANSWERS);
+    setRubricMode("type");
+    setReached(STEPS.length - 1);
+    go(1);
   }
 
   async function uploadRubric(file: File) {
-    setRubricStatus({ kind: "loading", message: `Reading ${file.name}...` });
+    setRubricStatus({ kind: "loading", message: `Reading ${file.name}…` });
     try {
       const r = await readRubricFile(file);
       setRubricText(r.rubricText);
@@ -113,13 +178,13 @@ export default function SetupPanel({ onStart, initial, onCancel }: Props) {
 
   async function structureRubric() {
     const original = rubricText;
-    setRubricStatus({ kind: "loading", message: "AI is structuring your rubric..." });
+    setRubricStatus({ kind: "loading", message: "The AI is structuring your rubric…" });
     try {
       const r = await structureRubricText(original);
       setRubricBeforeAi(original);
       setRubricText(r.rubricText);
       if (r.question && !question.trim()) setQuestion(r.question);
-      setRubricStatus({ kind: "ok", message: r.note.replace("Read by AI from your text.", "Structured by AI.") });
+      setRubricStatus({ kind: "ok", message: r.note.replace("Read by AI from your text.", "Structured by the AI.") });
     } catch (e) {
       setRubricStatus({ kind: "error", message: e instanceof Error ? e.message : "Could not structure the rubric." });
     }
@@ -133,152 +198,248 @@ export default function SetupPanel({ onStart, initial, onCancel }: Props) {
   }
 
   async function uploadAnswers(file: File) {
-    setAnswersStatus({ kind: "loading", message: `Reading ${file.name}...` });
+    setAnswersStatus({ kind: "loading", message: `Reading ${file.name}…` });
     try {
       const text = await readAnswersFile(file);
       setAnswersText(text);
-      setAnswersStatus({ kind: "ok", message: `Loaded from ${file.name}. Only the answer text is used; name or ID columns are ignored.` });
+      setAnswersMode("paste");
+      setAnswersStatus({ kind: "ok", message: `Loaded from ${file.name}. Only the answer text is used.` });
     } catch (e) {
       setAnswersStatus({ kind: "error", message: e instanceof Error ? e.message : "Could not read the file." });
     }
   }
 
-  function start(e: React.FormEvent) {
-    e.preventDefault();
-    setSubmitted(true);
-    if (problems.length > 0) return;
-    onStart({ question: question.trim(), rubricText, criteria: rubric.criteria, answerTexts: answers });
-  }
+  const titles = [
+    { title: editing ? "Edit the question" : "What are you grading?", sub: "Paste the exam question. The AI reads it with the rubric." },
+    { title: "How is it marked?", sub: "Upload your rubric, or type one criterion per line with its marks." },
+    { title: "Add the answers", sub: "Answers are labeled S1, S2… Use fake or anonymized answers only, never names or IDs." },
+  ][step];
+
+  const primaryLabel =
+    step < STEPS.length - 1 ? "Continue" : editing ? "Save changes" : `Start grading${answers.length > 0 ? ` ${answers.length} answer${answers.length === 1 ? "" : "s"}` : ""}`;
 
   return (
-    <form onSubmit={start} className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h2 className="font-serif text-[34px] leading-10 font-semibold tracking-tight">{editing ? "Edit setup" : "Set up one question"}</h2>
-          <p className="text-sm text-ink-muted">
-            {editing
-              ? "Add, remove or fix answers, or correct the rubric. Answers you leave unchanged keep their scores."
-              : "Paste or upload the question, rubric, and typed answers. Answers are labeled S1, S2, ... automatically."}
-          </p>
-        </div>
-        {!editing && (
-          <button type="button" onClick={insertSample} className="btn-secondary">
-            Insert sample (fake data)
+    <form
+      onSubmit={(e) => {
+        e.preventDefault();
+        next();
+      }}
+      className="mx-auto w-full max-w-2xl"
+    >
+      {/* Step bar: one segment per step; filled-in steps can be revisited. */}
+      <nav aria-label="Setup steps" className="mb-10 flex gap-2">
+        {STEPS.map((name, i) => (
+          <button
+            key={name}
+            type="button"
+            disabled={i > reached}
+            onClick={() => go(i)}
+            aria-current={i === step ? "step" : undefined}
+            className="group flex flex-1 flex-col gap-2 text-left disabled:cursor-default"
+          >
+            <span className={`h-1 rounded-full transition-colors duration-300 ${i <= step ? "bg-primary" : "bg-line"}`} />
+            <span className={`text-xs font-semibold transition-colors ${i === step ? "text-ink" : i <= reached ? "text-ink-muted group-hover:text-ink" : "text-ink-muted/60"}`}>
+              {i + 1}. {name}
+            </span>
           </button>
-        )}
-      </div>
-
-      <label className="block">
-        <span className="label">Exam question</span>
-        <textarea
-          value={question}
-          onChange={(e) => setQuestion(e.target.value)}
-          rows={2}
-          className="input font-serif text-lg"
-          placeholder="e.g. Explain operant conditioning and give one example."
-        />
-      </label>
-
-      <div>
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <label htmlFor="rubric" className="label">
-            Rubric (one criterion per line)
-          </label>
-          <span className="flex flex-wrap gap-2">
-            <button
-              type="button"
-              className="btn-secondary !px-3 !py-1 text-xs"
-              onClick={structureRubric}
-              disabled={!rubricText.trim() || rubricStatus?.kind === "loading"}
-            >
-              Structure with AI
-            </button>
-            <UploadButton label="Upload rubric (PDF, Word, photo, TXT, CSV)" accept={RUBRIC_ACCEPT} onFile={uploadRubric} disabled={rubricStatus?.kind === "loading"} />
-          </span>
-        </div>
-        <span className="hint">
-          Format: <code>Mark | Description</code>, e.g. <code>2 | Gives a correct example</code>. &quot;Gives a correct example (2 marks)&quot; and
-          tables pasted from Word or Excel also work. Lines without a mark, such as headings, are skipped. Or describe the marking scheme in
-          your own words and click <strong>Structure with AI</strong>; uploaded PDFs, photos and Word files are read the same way. Check the
-          result before grading.
-        </span>
-        <textarea
-          id="rubric"
-          value={rubricText}
-          onChange={(e) => setRubricText(e.target.value)}
-          rows={5}
-          className="input font-mono text-sm leading-[22px]"
-          placeholder={"2 | Defines operant conditioning\n2 | Gives a correct example\n1 | Mentions reinforcement or punishment"}
-        />
-        <StatusLine status={rubricStatus} />
-        {rubricBeforeAi !== null && (
-          <button type="button" className="mt-1 block text-sm font-semibold text-primary underline" onClick={undoStructure}>
-            Undo: bring back my original text
-          </button>
-        )}
-        {rubric.criteria.length > 0 && (
-          <span className="mt-1 block text-sm text-ink-muted">
-            {rubric.criteria.length} criteria · {rubric.totalPoints} points total
-          </span>
-        )}
-        {rubric.skipped.length > 0 && (
-          <span className="mt-1 block text-sm text-ink-muted" role="status">
-            {rubric.skipped.length} line{rubric.skipped.length === 1 ? "" : "s"} without a mark skipped (treated as{" "}
-            {rubric.skipped.length === 1 ? "a heading" : "headings"}):{" "}
-            {rubric.skipped
-              .slice(0, 5)
-              .map((s) => `line ${s.line} "${s.text.length > 40 ? `${s.text.slice(0, 40)}…` : s.text}"`)
-              .join(", ")}
-            {rubric.skipped.length > 5 ? `, and ${rubric.skipped.length - 5} more` : ""}. To count one as a criterion, add a mark, e.g.{" "}
-            <code>2 | Description</code>.
-          </span>
-        )}
-        {rubric.errors.map((err) => (
-          <span key={err.line} className="mt-1 block text-sm text-danger" role="alert">
-            Line {err.line} (&quot;{err.text}&quot;): {err.message}
-          </span>
         ))}
-      </div>
+      </nav>
 
-      <div>
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <label htmlFor="answers" className="label">
-            Student answers
-          </label>
-          <UploadButton label="Upload answers (TXT, CSV)" accept={ANSWERS_ACCEPT} onFile={uploadAnswers} disabled={answersStatus?.kind === "loading"} />
+      <div key={step} className={direction === "forward" ? "enter-forward" : "enter-back"}>
+        <h2 className="font-serif text-[40px] leading-[46px] font-semibold tracking-tight">{titles.title}</h2>
+        <p className="mt-2 text-base text-ink-muted">{titles.sub}</p>
+
+        <div className="mt-8 space-y-4">
+          {step === 0 && (
+            <>
+              <textarea
+                value={question}
+                onChange={(e) => setQuestion(e.target.value)}
+                rows={4}
+                autoFocus
+                aria-label="Exam question"
+                className="input rounded-lg px-5 py-4 font-serif text-xl leading-8"
+                placeholder="Explain operant conditioning and give one example."
+              />
+              {!editing && (
+                <p className="text-sm text-ink-muted">
+                  Just looking?{" "}
+                  <button type="button" onClick={useSample} className="font-semibold text-primary underline-offset-4 hover:underline">
+                    Try it with sample answers
+                  </button>
+                </p>
+              )}
+            </>
+          )}
+
+          {step === 1 && (
+            <>
+              <Segmented
+                label="How to add the rubric"
+                value={rubricMode}
+                onChange={setRubricMode}
+                options={[
+                  { value: "upload", label: "Upload a file" },
+                  { value: "type", label: "Type it" },
+                ]}
+              />
+              {rubricMode === "upload" ? (
+                <DropZone
+                  title="Drop your rubric here, or click to choose"
+                  hint="PDF, Word, photo, TXT or CSV. The AI turns it into lines you can check."
+                  accept={RUBRIC_ACCEPT}
+                  onFile={uploadRubric}
+                  disabled={busy}
+                />
+              ) : (
+                <div className="space-y-2">
+                  <textarea
+                    value={rubricText}
+                    onChange={(e) => setRubricText(e.target.value)}
+                    rows={5}
+                    aria-label="Rubric"
+                    className="input rounded-lg px-4 py-3 font-mono text-sm leading-[22px]"
+                    placeholder={"2 | Defines operant conditioning\n2 | Gives a correct example\n1 | Mentions reinforcement or punishment"}
+                  />
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <p className="text-xs text-ink-muted">Also works: &quot;Gives an example (2 marks)&quot;, or a table pasted from Word or Excel.</p>
+                    <button type="button" className="btn-ghost" onClick={structureRubric} disabled={!rubricText.trim() || busy}>
+                      Structure with AI
+                    </button>
+                  </div>
+                </div>
+              )}
+              <StatusLine status={rubricStatus} />
+              {rubricBeforeAi !== null && (
+                <button type="button" className="text-sm font-semibold text-primary underline-offset-4 hover:underline" onClick={undoStructure}>
+                  Undo: bring back my original text
+                </button>
+              )}
+
+              {rubric.criteria.length > 0 && (
+                <div className="fade-up card overflow-hidden">
+                  <ul className="divide-y divide-line">
+                    {rubric.criteria.map((c) => (
+                      <li key={c.id} className="flex items-baseline justify-between gap-4 px-5 py-3">
+                        <span className="text-[15px] leading-6">{c.description}</span>
+                        <span className="shrink-0 font-mono text-sm text-ink-muted">{c.points} pt{c.points === 1 ? "" : "s"}</span>
+                      </li>
+                    ))}
+                  </ul>
+                  <div className="flex items-baseline justify-between border-t border-line bg-sunken px-5 py-3">
+                    <span className="text-sm font-semibold">Total</span>
+                    <span className="font-mono text-sm font-medium">{rubric.totalPoints} pts</span>
+                  </div>
+                </div>
+              )}
+              {rubric.skipped.length > 0 && (
+                <details className="text-sm text-ink-muted">
+                  <summary className="cursor-pointer">
+                    {rubric.skipped.length} line{rubric.skipped.length === 1 ? "" : "s"} without a mark skipped
+                  </summary>
+                  <ul className="mt-2 space-y-1 pl-4">
+                    {rubric.skipped.map((s) => (
+                      <li key={s.line} className="font-mono text-xs">
+                        line {s.line}: {s.text.length > 60 ? `${s.text.slice(0, 60)}…` : s.text}
+                      </li>
+                    ))}
+                  </ul>
+                  <p className="mt-2">To count one, add its mark, like &quot;2 | Description&quot;.</p>
+                </details>
+              )}
+              {rubric.errors.map((err) => (
+                <p key={err.line} className="text-sm text-danger" role="alert">
+                  Line {err.line} (&quot;{err.text}&quot;): {err.message}
+                </p>
+              ))}
+            </>
+          )}
+
+          {step === 2 && (
+            <>
+              <Segmented
+                label="How to add the answers"
+                value={answersMode}
+                onChange={setAnswersMode}
+                options={[
+                  { value: "paste", label: "Paste them" },
+                  { value: "upload", label: "Upload a file" },
+                ]}
+              />
+              {answersMode === "upload" ? (
+                <DropZone
+                  title="Drop a file here, or click to choose"
+                  hint="TXT with answers separated by ---, or CSV with one answer per row. Name and ID columns are ignored."
+                  accept={ANSWERS_ACCEPT}
+                  onFile={uploadAnswers}
+                  disabled={busy}
+                />
+              ) : (
+                <textarea
+                  value={answersText}
+                  onChange={(e) => setAnswersText(e.target.value)}
+                  rows={9}
+                  aria-label="Student answers"
+                  className="input rounded-lg px-4 py-3 font-serif text-base leading-7"
+                  placeholder={"First answer…\n---\nSecond answer…\n---\nThird answer…"}
+                />
+              )}
+              <StatusLine status={answersStatus} />
+              {answersMode === "paste" && <p className="text-xs text-ink-muted">Put a line with only --- between answers.</p>}
+
+              {answers.length > 0 && (
+                <div className="fade-up card overflow-hidden">
+                  <ul className="divide-y divide-line">
+                    {answers.slice(0, 5).map((a, i) => (
+                      <li key={i} className="flex items-baseline gap-4 px-5 py-3">
+                        <span className="w-8 shrink-0 font-mono text-sm text-ink-muted">S{i + 1}</span>
+                        <span className="truncate font-serif text-[15px]">{a.replace(/\s+/g, " ")}</span>
+                      </li>
+                    ))}
+                  </ul>
+                  <div className="border-t border-line bg-sunken px-5 py-3 text-sm font-semibold">
+                    {answers.length} answer{answers.length === 1 ? "" : "s"}
+                    {answers.length > 5 && <span className="font-normal text-ink-muted"> · showing the first 5</span>}
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+
+          {triedNext && stepProblems.length > 0 && (
+            <div className="fade-up callout callout-danger flex-col gap-1" role="alert">
+              {stepProblems.map((p) => (
+                <p key={p}>{p}</p>
+              ))}
+            </div>
+          )}
         </div>
-        <span className="hint">
-          Separate answers with a line containing only <code>---</code>, or upload a CSV with one answer per row. Use fake or anonymized answers only. No names or student IDs.
-        </span>
-        <textarea
-          id="answers"
-          value={answersText}
-          onChange={(e) => setAnswersText(e.target.value)}
-          rows={10}
-          className="input font-serif text-[15px] leading-6"
-          placeholder={"First answer...\n---\nSecond answer...\n---\nThird answer..."}
-        />
-        <StatusLine status={answersStatus} />
-        <span className="mt-1 block text-sm text-ink-muted">{answers.length} answer{answers.length === 1 ? "" : "s"} detected</span>
       </div>
 
-      {submitted && problems.length > 0 && (
-        <ul className="callout callout-danger flex-col gap-1" role="alert">
-          {problems.map((p) => (
-            <li key={p}>• {p}</li>
-          ))}
-        </ul>
-      )}
-
-      <div className="flex flex-wrap gap-3">
-        <button type="submit" className="btn-primary min-h-12 w-full px-6 text-base sm:w-auto">
-          {editing ? "Save changes and continue grading" : `Start grading${answers.length > 0 ? ` ${answers.length} answer${answers.length === 1 ? "" : "s"}` : ""}`}
-        </button>
-        {onCancel && (
-          <button type="button" className="btn-secondary min-h-12 w-full px-6 text-base sm:w-auto" onClick={onCancel}>
-            Cancel
+      <div className="mt-10 flex flex-wrap-reverse items-center justify-between gap-3">
+        <div>
+          {step > 0 ? (
+            <button type="button" className="btn-ghost" onClick={() => go(step - 1)}>
+              ← Back
+            </button>
+          ) : (
+            onCancel && (
+              <button type="button" className="btn-ghost" onClick={onCancel}>
+                Cancel
+              </button>
+            )
+          )}
+        </div>
+        <div className="flex items-center gap-2">
+          {step > 0 && onCancel && (
+            <button type="button" className="btn-ghost" onClick={onCancel}>
+              Cancel
+            </button>
+          )}
+          <button type="submit" className="btn-primary btn-lg" disabled={busy}>
+            {primaryLabel} {step < STEPS.length - 1 && <span aria-hidden>→</span>}
           </button>
-        )}
+        </div>
       </div>
     </form>
   );

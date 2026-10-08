@@ -42,9 +42,14 @@ export default function ThemeToggle() {
   }
 
   return (
-    <button type="button" className="btn-secondary" onClick={toggle} aria-label="Switch between light and dark theme">
+    <button
+      type="button"
+      className="btn-ghost h-10 w-10 !px-0 text-base"
+      onClick={toggle}
+      aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+      title={theme === "dark" ? "Light mode" : "Dark mode"}
+    >
       <span aria-hidden>{theme === "dark" ? "☀" : "☾"}</span>
-      {theme === null ? "Theme" : theme === "dark" ? "Light mode" : "Dark mode"}
     </button>
   );
 }

@@ -263,64 +263,81 @@ export default function GraderApp() {
   const currentAnswer = session?.answers[current];
   const elapsed = currentAnswer ? currentAnswer.secondsSpent + (live?.answerId === currentAnswer.id ? live.secs : 0) : 0;
 
+  const navItems: [View, string][] = [
+    ["grade", "Grade"],
+    ["results", "Results"],
+    ["setup", "Setup"],
+  ];
+
   return (
-    <div className="mx-auto w-full max-w-5xl flex-1 px-4 py-6">
-      <header className="mb-6 flex flex-wrap items-center justify-between gap-3 border-b border-line pb-4">
-        <div className="flex items-center gap-3">
-          {/* Both marks are rendered; globals.css shows the one for the active theme. Plain <img>: SVGs gain nothing from next/image. */}
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/logo-mark.svg" alt="" width={40} height={40} className="logo-light h-10 w-10" />
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/logo-mark-dark.svg" alt="" width={40} height={40} className="logo-dark h-10 w-10" />
-          <div>
-            <h1 className="font-serif text-[26px] leading-[30px] font-semibold tracking-tight">TA Grader</h1>
-            <p className="text-sm text-ink-muted">AI highlights rubric matches. You decide every score.</p>
+    <div className="flex w-full flex-1 flex-col">
+      <header className="sticky top-0 z-30 border-b border-line bg-paper/85 backdrop-blur">
+        <div className="mx-auto flex h-16 w-full max-w-5xl items-center justify-between gap-3 px-4">
+          <div className="flex items-center gap-2.5">
+            {/* Both marks are rendered; globals.css shows the one for the active theme. Plain <img>: SVGs gain nothing from next/image. */}
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/logo-mark.svg" alt="" width={32} height={32} className="logo-light h-8 w-8" />
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/logo-mark-dark.svg" alt="" width={32} height={32} className="logo-dark h-8 w-8" />
+            <span className="font-serif text-xl font-semibold tracking-tight">TA Grader</span>
+          </div>
+          <div className="flex items-center gap-2">
+            {session && (
+              <>
+                <nav className="seg hidden sm:inline-flex" aria-label="Views">
+                  {navItems.map(([v, label]) => (
+                    <button key={v} type="button" className="seg-option" aria-pressed={view === v} onClick={() => setView(v)}>
+                      {label}
+                    </button>
+                  ))}
+                </nav>
+                <button type="button" className="btn-ghost" onClick={newSession}>
+                  New
+                </button>
+              </>
+            )}
+            <ThemeToggle />
           </div>
         </div>
-        <div className="flex flex-wrap gap-2">
-          {session && (
-            <>
-              <button type="button" className={view === "grade" ? "btn-primary" : "btn-secondary"} onClick={() => setView("grade")}>
-                Grade
-              </button>
-              <button type="button" className={view === "results" ? "btn-primary" : "btn-secondary"} onClick={() => setView("results")}>
-                Results &amp; export
-              </button>
-              <button type="button" className={view === "setup" ? "btn-primary" : "btn-secondary"} onClick={() => setView("setup")}>
-                Edit setup
-              </button>
-              <button type="button" className="btn-secondary" onClick={newSession}>
-                New question
-              </button>
-            </>
-          )}
-          <ThemeToggle />
-        </div>
+        {session && view !== "setup" && (
+          <div className="h-0.5 w-full bg-line" aria-hidden>
+            <div className="h-full bg-met transition-all duration-500" style={{ width: `${(scoredCount / session.answers.length) * 100}%` }} />
+          </div>
+        )}
       </header>
 
-      {status?.ai === "mock" && (
-        <div className="mb-4 callout callout-info" role="status">
-          <strong>Mock mode: AI results are fake.</strong> No Gemini API key is set on the server.
-        </div>
+      {session && (
+        <nav className="seg mx-auto mt-4 sm:hidden" aria-label="Views">
+          {navItems.map(([v, label]) => (
+            <button key={v} type="button" className="seg-option" aria-pressed={view === v} onClick={() => setView(v)}>
+              {label}
+            </button>
+          ))}
+        </nav>
       )}
-      {notice && (
-        <div className="mb-4 callout callout-danger" role="alert">
-          {notice}
+
+      <main className="mx-auto w-full max-w-5xl flex-1 px-4 pt-10 pb-10">
+      {(status?.ai === "mock" || notice) && (
+        <div className={`mx-auto mb-8 space-y-2 ${!session || view === "setup" ? "max-w-2xl" : "max-w-3xl"}`}>
+          {status?.ai === "mock" && (
+            <p className="callout callout-info rounded-2xl px-5 py-2 text-xs" role="status">
+              <strong>Mock mode:</strong> AI results are fake. No Gemini API key is set on the server.
+            </p>
+          )}
+          {notice && (
+            <p className="callout callout-danger rounded-lg" role="alert">
+              {notice}
+            </p>
+          )}
         </div>
       )}
 
-      {session && view !== "setup" && (
-        <div className="mb-6 space-y-2 rounded-lg bg-sunken px-5 py-4">
-          <p className="font-serif text-xl leading-7">{session.question || "(no question text)"}</p>
-          <p className="text-sm text-ink-muted">
-            {totalPoints} points possible · {session.answers.length} answers · <strong className="font-semibold text-ink">{scoredCount} of {session.answers.length} scored</strong> ·{" "}
-            {flaggedCount} flagged
-          </p>
-          <div className="h-2 w-full overflow-hidden rounded-full bg-line" aria-hidden>
-            <div className="h-full rounded-full bg-met transition-all" style={{ width: `${(scoredCount / session.answers.length) * 100}%` }} />
-          </div>
-          <p className="text-xs text-ink-muted">
-            {saved ? "Saved. Bookmark this page's link to come back to this session." : "Not saved to a server. Refreshing the page clears your work."}
+      {session && view === "grade" && (
+        <div className="mx-auto mb-8 max-w-3xl">
+          <p className="font-serif text-lg leading-7 text-ink">{session.question || "(no question text)"}</p>
+          <p className="mt-1 text-xs text-ink-muted">
+            {scoredCount} of {session.answers.length} scored · {flaggedCount} flagged · {totalPoints} pts ·{" "}
+            {saved ? "saved, bookmark this link to come back" : "not saved, refreshing clears your work"}
           </p>
         </div>
       )}
@@ -358,9 +375,12 @@ export default function GraderApp() {
         />
       )}
 
+      </main>
+
       {toast && (
         <div
-          className="fixed bottom-4 left-1/2 z-50 -translate-x-1/2 rounded-md bg-primary px-4 py-2 text-sm font-semibold text-on-primary shadow-float"
+          key={toast}
+          className="fade-up fixed top-20 left-1/2 z-50 max-w-[calc(100%-2rem)] -translate-x-1/2 rounded-full bg-primary px-5 py-2.5 text-center text-sm font-semibold text-on-primary shadow-float"
           role="status"
           aria-live="polite"
         >
@@ -368,10 +388,12 @@ export default function GraderApp() {
         </div>
       )}
 
-      <footer className="mt-10 border-t border-line pt-4 text-xs text-ink-muted">
-        AI suggestions only. The grader decides every score. Use fake or anonymized answers: do not enter student names or IDs.
-        Answers are sent to Google Gemini for analysis{status?.db ? " and saved to the team's database" : ""}.
-      </footer>
+      {!(session && view === "grade") && (
+        <footer className="mx-auto w-full max-w-5xl px-4 pb-8 text-center text-xs text-ink-muted">
+          The AI suggests, you decide every score. Use fake or anonymized answers. Answers are sent to Google Gemini
+          {status?.db ? " and saved to the team's database" : ""}.
+        </footer>
+      )}
     </div>
   );
 }

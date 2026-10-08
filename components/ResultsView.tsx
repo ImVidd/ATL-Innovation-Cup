@@ -11,6 +11,8 @@ export default function ResultsView({ session, totalPoints, onBack }: Props) {
   const flagged = session.answers.filter((a) => a.analysis?.flag).length;
   const avgTime = scored.length ? scored.reduce((s, a) => s + a.secondsSpent, 0) / scored.length : 0;
   const avgScore = scored.length ? scored.reduce((s, a) => s + (a.finalScore ?? 0), 0) / scored.length : 0;
+  const allDone = scored.length === session.answers.length;
+  const firstUnscored = session.answers.findIndex((a) => a.finalScore === null || a.finalScore === undefined);
 
   function download() {
     const blob = new Blob([toCsv(session.answers, totalPoints)], { type: "text/csv" });
@@ -23,61 +25,68 @@ export default function ResultsView({ session, totalPoints, onBack }: Props) {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <Stat label="Scored" value={`${scored.length} / ${session.answers.length}`} />
-        <Stat label="Avg time per answer" value={scored.length ? formatSeconds(avgTime) : "–"} />
-        <Stat label="Avg score" value={scored.length ? `${avgScore.toFixed(1)} / ${totalPoints}` : "–"} />
-        <Stat label="Flagged by AI" value={String(flagged)} />
+    <div className="enter-forward mx-auto w-full max-w-3xl">
+      <div className="text-center">
+        {allDone && (
+          <div className="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-full bg-met-bg text-met" aria-hidden>
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4">
+              <path d="M5 12.5 10 17.5 19 7" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </div>
+        )}
+        <h2 className="font-serif text-[40px] leading-[46px] font-semibold tracking-tight">
+          {allDone ? "The whole set is graded." : `${scored.length} of ${session.answers.length} scored`}
+        </h2>
+        <p className="mt-2 text-base text-ink-muted">
+          {allDone ? "Download the scores for your gradebook." : "Finish the rest, or download what you have so far."}
+        </p>
       </div>
 
-      <div className="card overflow-x-auto">
-        <table className="w-full text-left text-sm">
-          <thead className="bg-sunken text-xs text-ink-muted">
-            <tr>
-              <th className="px-4 py-2 font-semibold">Answer</th>
-              <th className="px-4 py-2 font-semibold">Score</th>
-              <th className="px-4 py-2 font-semibold">Time</th>
-              <th className="px-4 py-2 font-semibold">AI flag</th>
-              <th className="px-4 py-2 font-semibold">Note</th>
-            </tr>
-          </thead>
-          <tbody>
-            {session.answers.map((a, i) => (
-              <tr key={a.id} className="border-t border-line">
-                <td className="px-4 py-2.5">
-                  <button type="button" className="font-mono font-medium text-primary underline" onClick={() => onBack(i)}>
-                    {a.label}
-                  </button>
-                </td>
-                <td className="px-4 py-2.5">{a.finalScore ?? <span className="text-ink-muted">not scored</span>}</td>
-                <td className="px-4 py-2.5 font-mono">{formatSeconds(a.secondsSpent)}</td>
-                <td className="px-4 py-2.5">{a.analysis?.flag ? `⚠ ${a.analysis.flagReason}` : a.analysisError ? "AI failed" : ""}</td>
-                <td className="px-4 py-2.5">{a.graderNote}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+      <div className="mt-10 grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <Stat label="Scored" value={`${scored.length}/${session.answers.length}`} />
+        <Stat label="Avg time" value={scored.length ? formatSeconds(avgTime) : "–"} />
+        <Stat label="Avg score" value={scored.length ? `${avgScore.toFixed(1)}/${totalPoints}` : "–"} />
+        <Stat label="Flagged" value={String(flagged)} />
       </div>
 
-      <div className="flex flex-wrap gap-3">
-        <button type="button" onClick={download} className="btn-primary">
+      <ul className="card mt-8 divide-y divide-line">
+        {session.answers.map((a, i) => (
+          <li key={a.id}>
+            <button type="button" onClick={() => onBack(i)} className="flex w-full items-center gap-4 px-5 py-3.5 text-left transition-colors hover:bg-sunken">
+              <span className="w-10 shrink-0 font-mono text-sm">{a.label}</span>
+              <span className="min-w-0 flex-1 truncate text-sm text-ink-muted">
+                {a.analysis?.flag ? <span className="text-flag">⚠ {a.analysis.flagReason}</span> : a.analysisError ? "AI failed" : a.graderNote}
+              </span>
+              <span className="shrink-0 font-mono text-xs text-ink-muted tabular-nums">{formatSeconds(a.secondsSpent)}</span>
+              <span className={`w-16 shrink-0 text-right font-mono text-sm tabular-nums ${a.finalScore === null || a.finalScore === undefined ? "text-ink-muted" : "text-ink"}`}>
+                {a.finalScore ?? "–"}
+                <span className="text-ink-muted">/{totalPoints}</span>
+              </span>
+            </button>
+          </li>
+        ))}
+      </ul>
+
+      <div className="mt-10 flex flex-wrap items-center justify-center gap-3">
+        <button type="button" onClick={download} className="btn-primary btn-lg">
           Download CSV
         </button>
-        <button type="button" onClick={() => onBack(0)} className="btn-secondary">
-          Back to grading
-        </button>
+        {!allDone && (
+          <button type="button" onClick={() => onBack(firstUnscored === -1 ? 0 : firstUnscored)} className="btn-ghost">
+            Keep grading →
+          </button>
+        )}
       </div>
-      <p className="text-xs text-ink-muted">CSV has answer IDs, scores, time, AI flag and your notes. It does not include answer text.</p>
+      <p className="mt-4 text-center text-xs text-ink-muted">The CSV has answer IDs, scores, time, flags and your notes. No answer text.</p>
     </div>
   );
 }
 
 function Stat({ label, value }: { label: string; value: string }) {
   return (
-    <div className="card px-4 py-3">
-      <div className="text-xs text-ink-muted">{label}</div>
-      <div className="text-[28px] leading-8 font-semibold tabular-nums">{value}</div>
+    <div className="rounded-lg bg-sunken px-4 py-4 text-center">
+      <div className="font-mono text-[26px] leading-8 font-medium tabular-nums">{value}</div>
+      <div className="mt-1 text-xs text-ink-muted">{label}</div>
     </div>
   );
 }

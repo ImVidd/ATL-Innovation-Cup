@@ -191,4 +191,77 @@ body {
   .callout-danger {
     @apply border-danger bg-danger-bg;
   }
+
+  /* Larger pill buttons for the one main action of a screen, and quiet text buttons. */
+  .btn-lg {
+    @apply min-h-12 rounded-full px-7 text-base;
+  }
+  .btn-ghost {
+    @apply inline-flex min-h-10 items-center justify-center gap-1.5 rounded-full px-4 text-sm font-semibold text-ink-muted transition-colors hover:bg-sunken hover:text-ink disabled:cursor-not-allowed disabled:opacity-50;
+  }
+  /* Segmented control (two to four options side by side). */
+  .seg {
+    @apply inline-flex rounded-full bg-sunken p-1;
+  }
+  .seg-option {
+    @apply min-h-8 rounded-full px-4 text-sm font-semibold text-ink-muted transition-all hover:text-ink;
+  }
+  .seg-option[aria-pressed="true"] {
+    @apply bg-surface text-ink shadow-sm;
+  }
+  /* A file drop area. */
+  .dropzone {
+    @apply flex w-full flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed border-control bg-surface px-6 py-10 text-center transition-colors hover:border-primary hover:bg-sunken;
+  }
+  .dropzone[data-over="true"] {
+    @apply border-primary bg-sunken;
+  }
+}
+
+/* Motion: short and soft. Screens slide a little in the direction of travel; everything else fades up. */
+@keyframes enter-forward {
+  from {
+    opacity: 0;
+    transform: translateX(24px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes enter-back {
+  from {
+    opacity: 0;
+    transform: translateX(-24px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.enter-forward {
+  animation: enter-forward 320ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+.enter-back {
+  animation: enter-back 320ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+.fade-up {
+  animation: fade-up 280ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .enter-forward,
+  .enter-back,
+  .fade-up {
+    animation: none;
+  }
 }
